@@ -16,13 +16,13 @@ export default function Pubblica() {
       <Navbar />
       <div className="page">
         <div className="container">
-          <h1 className="page-title" style={{ textAlign: 'center' }}>Cosa vuoi pubblicare?</h1>
+          <div className="page-title">Pubblica contenuto</div>
           <div className="publish-choice">
             <button className="publish-choice-btn" onClick={() => vai('documento')}>
-              📄 Pubblica Documento
+              📄 Documento
             </button>
             <button className="publish-choice-btn" onClick={() => vai('consiglio')}>
-              💡 Pubblica Consiglio
+              💡 Consiglio
             </button>
           </div>
         </div>

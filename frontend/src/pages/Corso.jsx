@@ -10,9 +10,7 @@ export default function Corso() {
   const [errore, setErrore] = useState('')
 
   useEffect(() => {
-    getEsami()
-      .then(setEsami)
-      .catch(err => setErrore(err.message))
+    getEsami().then(setEsami).catch(err => setErrore(err.message))
   }, [])
 
   const filtrati = esami.filter(e => e.nome.toLowerCase().includes(cerca.toLowerCase()))
@@ -20,11 +18,13 @@ export default function Corso() {
   return (
     <>
       <Navbar extra={
-        <button className="btn-ghost" onClick={() => navigate('/pubblica')}>Pubblica contenuto</button>
+        <button className="btn btn-ghost" onClick={() => navigate('/pubblica')}>+ Pubblica</button>
       } />
       <div className="page">
         <div className="container">
-          <h1 className="page-title">Ingegneria Informatica</h1>
+          <div className="top-bar">
+            <div className="page-title" style={{ marginBottom: 0 }}>Ingegneria Informatica</div>
+          </div>
           {errore && <div className="error-banner">{errore}</div>}
           <input
             className="search-bar"

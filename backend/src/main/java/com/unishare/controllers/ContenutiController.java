@@ -2,8 +2,11 @@ package com.unishare.controllers;
 
 import com.unishare.models.Contenuto;
 import com.unishare.storage.InMemoryStore;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -23,6 +26,7 @@ public class ContenutiController {
         m.put("corpo", c.getCorpo());
         m.put("etichetta", c.getEtichetta());
         m.put("nomeFile", c.getNomeFile());
+        m.put("hasFile", InMemoryStore.files.containsKey(c.getId()));
         m.put("utente", c.getUtente());
         m.put("esameId", c.getEsameId());
         m.put("dataCreazione", c.getDataCreazione());
@@ -69,5 +73,36 @@ public class ContenutiController {
                 etichetta, nomeFile, utente, esameId, data);
         InMemoryStore.contenuti.add(c);
         return arricchisci(c, utente);
+    }
+
+    @PostMapping("/{id}/file")
+    public ResponseEntity<Map<String, Object>> uploadFile(
+            @PathVariable int id,
+            @RequestParam("file") MultipartFile file) throws IOException {
+        Optional<Contenuto> opt = InMemoryStore.contenuti.stream()
+                .filter(c -> c.getId() == id)
+                .findFirst();
+        if (opt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        String nome = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
+        InMemoryStore.files.put(id, file.getBytes());
+        opt.get().setNomeFile(nome);
+        return ResponseEntity.ok(Map.of("successo", true, "nomeFile", nome));
+    }
+
+    @GetMapping("/{id}/file")
+    public ResponseEntity<byte[]> downloadFile(@PathVariable int id) {
+        byte[] bytes = InMemoryStore.files.get(id);
+        if (bytes == null) return ResponseEntity.notFound().build();
+        String nome = InMemoryStore.contenuti.stream()
+                .filter(c -> c.getId() == id)
+                .map(Contenuto::getNomeFile)
+                .findFirst()
+                .orElse("file");
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=\"" + nome + "\"")
+                .header("Content-Type", "application/octet-stream")
+                .body(bytes);
     }
 }

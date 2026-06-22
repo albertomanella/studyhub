@@ -10,8 +10,8 @@ function formatData(str) {
 }
 
 function stelleInfo(c) {
-  if (c.numValutazioni === 0) return 'Nessuna valutazione'
-  return `★ ${c.mediaStelle.toFixed(1)} — ${c.numValutazioni} vot${c.numValutazioni === 1 ? 'o' : 'i'}`
+  if (c.numValutazioni === 0) return 'nessun voto'
+  return `${c.mediaStelle.toFixed(1)}/5 (${c.numValutazioni} vot${c.numValutazioni === 1 ? 'o' : 'i'})`
 }
 
 export default function Esame() {
@@ -40,10 +40,13 @@ export default function Esame() {
     return (
       <div className="card" onClick={() => navigate(`/contenuto/${c.id}`)}>
         <div className="card-title">{c.titolo}</div>
-        <div className="card-body">{(c.corpo || '').slice(0, 100)}{(c.corpo || '').length > 100 ? '…' : ''}</div>
+        <div className="card-body">
+          {(c.corpo || '').slice(0, 100)}{(c.corpo || '').length > 100 ? '...' : ''}
+        </div>
         <div className="card-meta">
           <span>@{c.utente}</span>
           <span>{formatData(c.dataCreazione)}</span>
+          {c.nomeFile && <span>📎 {c.nomeFile}</span>}
           <Stars value={Math.round(c.mediaStelle)} size="sm" />
           <span>{stelleInfo(c)}</span>
         </div>
@@ -55,8 +58,8 @@ export default function Esame() {
     return (
       <div className="card" onClick={() => navigate(`/contenuto/${c.id}`)}>
         <span className={`badge badge-${c.etichetta}`}>{c.etichetta}</span>
-        <div className="card-body" style={{ marginTop: 10 }}>
-          {(c.corpo || '').slice(0, 150)}{(c.corpo || '').length > 150 ? '…' : ''}
+        <div className="card-body" style={{ marginTop: 8 }}>
+          {(c.corpo || '').slice(0, 150)}{(c.corpo || '').length > 150 ? '...' : ''}
         </div>
         <div className="card-meta">
           <span>@{c.utente}</span>
@@ -71,25 +74,28 @@ export default function Esame() {
   return (
     <>
       <Navbar extra={
-        <button className="btn-ghost" onClick={() => navigate(`/pubblica?esame_id=${id}`)}>
-          Pubblica contenuto
+        <button className="btn btn-ghost" onClick={() => navigate(`/pubblica?esame_id=${id}`)}>
+          + Pubblica
         </button>
       } />
       <div className="page">
         <div className="container">
-          <h1 className="page-title">{nomeEsame || `Esame #${id}`}</h1>
+          <div className="top-bar">
+            <div className="page-title" style={{ marginBottom: 0 }}>{nomeEsame || `Esame #${id}`}</div>
+            <button className="btn" onClick={() => navigate('/corso')}>← Torna agli esami</button>
+          </div>
           {errore && <div className="error-banner">{errore}</div>}
 
-          <div className="section-title">Documenti</div>
+          <div className="section-title">Documenti ({documenti.length})</div>
           {documenti.length === 0
-            ? <div className="empty-msg">Nessun contenuto ancora.</div>
-            : <div className="grid">{documenti.map(c => <CardDoc key={c.id} c={c} />)}</div>
+            ? <div className="empty-msg">Nessun documento caricato.</div>
+            : documenti.map(c => <CardDoc key={c.id} c={c} />)
           }
 
-          <div className="section-title">Consigli</div>
+          <div className="section-title">Consigli ({consigli.length})</div>
           {consigli.length === 0
-            ? <div className="empty-msg">Nessun contenuto ancora.</div>
-            : <div className="grid">{consigli.map(c => <CardConsiglio key={c.id} c={c} />)}</div>
+            ? <div className="empty-msg">Nessun consiglio ancora.</div>
+            : consigli.map(c => <CardConsiglio key={c.id} c={c} />)
           }
         </div>
       </div>

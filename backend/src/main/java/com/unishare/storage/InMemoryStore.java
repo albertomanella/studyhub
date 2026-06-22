@@ -4,7 +4,9 @@ import com.unishare.models.*;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalDouble;
 
 @Component
@@ -14,6 +16,7 @@ public class InMemoryStore {
     public static List<Esame> esami = new ArrayList<>();
     public static List<Contenuto> contenuti = new ArrayList<>();
     public static List<Valutazione> valutazioni = new ArrayList<>();
+    public static Map<Integer, byte[]> files = new HashMap<>();
     public static int nextId = 1;
 
     public static synchronized int nextId() {

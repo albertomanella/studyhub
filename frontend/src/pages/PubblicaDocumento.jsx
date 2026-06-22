@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { getEsami, creaContenuto } from '../services/api'
 
+const BASE = 'http://localhost:8081/api'
+
 export default function PubblicaDocumento() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
@@ -12,8 +14,9 @@ export default function PubblicaDocumento() {
   const [esameId, setEsameId] = useState(params.get('esame_id') || '')
   const [titolo, setTitolo] = useState('')
   const [corpo, setCorpo] = useState('')
-  const [nomeFile, setNomeFile] = useState('')
+  const [file, setFile] = useState(null)
   const [errore, setErrore] = useState('')
+  const [caricamento, setCaricamento] = useState(false)
 
   useEffect(() => {
     getEsami().then(setEsami).catch(() => {})
@@ -24,11 +27,22 @@ export default function PubblicaDocumento() {
     if (!esameId) { setErrore('Seleziona un esame'); return }
     if (!titolo.trim()) { setErrore('Il titolo è obbligatorio'); return }
     setErrore('')
+    setCaricamento(true)
     try {
-      await creaContenuto({ tipo: 'documento', titolo, corpo, nomeFile, username, esameId: parseInt(esameId) })
+      const nomeFile = file ? file.name : null
+      const res = await creaContenuto({ tipo: 'documento', titolo, corpo, nomeFile, username, esameId: parseInt(esameId) })
+
+      if (file && res.id) {
+        const fd = new FormData()
+        fd.append('file', file)
+        await fetch(`${BASE}/contenuti/${res.id}/file`, { method: 'POST', body: fd })
+      }
+
       navigate(`/esame/${esameId}`)
     } catch (err) {
       setErrore(err.message)
+    } finally {
+      setCaricamento(false)
     }
   }
 
@@ -37,14 +51,14 @@ export default function PubblicaDocumento() {
       <Navbar />
       <div className="page">
         <div className="container">
-          <form className="form-centered" style={{ margin: '20px auto' }} onSubmit={handleSubmit}>
+          <form className="form-wrap" style={{ margin: '16px auto' }} onSubmit={handleSubmit}>
             <div className="form-title">Pubblica Documento</div>
-            {errore && <div className="form-error" style={{ textAlign: 'center', marginBottom: 12 }}>{errore}</div>}
+            {errore && <div className="form-error" style={{ textAlign: 'center', marginBottom: 10 }}>{errore}</div>}
 
             <div className="form-group">
               <label className="form-label">Esame</label>
               <select className="form-input" value={esameId} onChange={e => setEsameId(e.target.value)}>
-                <option value="">— Seleziona esame —</option>
+                <option value="">-- seleziona --</option>
                 {esami.map(ex => <option key={ex.id} value={ex.id}>{ex.nome}</option>)}
               </select>
             </div>
@@ -63,13 +77,17 @@ export default function PubblicaDocumento() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Nome file (es. appunti_analisi.pdf)</label>
-              <input className="form-input" value={nomeFile}
-                onChange={e => setNomeFile(e.target.value)}
-                placeholder="nome_file.pdf" />
+              <label className="form-label">Allega file</label>
+              <div className="file-input-wrap">
+                <span>Scegli un file da allegare (opzionale)</span>
+                <input type="file" onChange={e => setFile(e.target.files[0] || null)} />
+                {file && <div style={{ marginTop: 4, color: '#1a5276' }}>File selezionato: {file.name}</div>}
+              </div>
             </div>
 
-            <button className="btn-primary btn-block" type="submit">Pubblica</button>
+            <button className="btn btn-primary btn-block" type="submit" disabled={caricamento}>
+              {caricamento ? 'Pubblicazione...' : 'Pubblica'}
+            </button>
           </form>
         </div>
       </div>

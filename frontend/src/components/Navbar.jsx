@@ -11,13 +11,13 @@ export default function Navbar({ extra }) {
 
   return (
     <nav className="navbar">
-      <Link to="/home" className="navbar-brand">UniShare</Link>
+      <Link to="/home" className="navbar-brand">StudyHub</Link>
       <div className="navbar-right">
         {extra}
         {username && (
           <>
             <span className="navbar-user">{username}</span>
-            <button className="btn-ghost" onClick={esci}>Esci</button>
+            <button className="btn btn-ghost" onClick={esci}>Esci</button>
           </>
         )}
       </div>

@@ -8,7 +8,7 @@ async function request(path, options = {}) {
     })
     return await res.json()
   } catch {
-    throw new Error('Backend non raggiungibile. Assicurati che il server Spring Boot sia avviato su localhost:8080.')
+    throw new Error('Backend non raggiungibile. Assicurati che il server sia avviato su localhost:8081.')
   }
 }
 

@@ -22,10 +22,10 @@ export default function Login() {
   }
 
   return (
-    <div style={{ paddingTop: 60, minHeight: '100vh', background: '#fff' }}>
-      <form className="form-centered" onSubmit={handleSubmit}>
-        <div className="form-title">UniShare</div>
-        {errore && <div className="form-error" style={{ textAlign: 'center', marginBottom: 12 }}>{errore}</div>}
+    <div style={{ background: '#f0f0f0', minHeight: '100vh', paddingTop: 40 }}>
+      <form className="form-wrap" onSubmit={handleSubmit}>
+        <div className="form-title">StudyHub — Accedi</div>
+        {errore && <div className="form-error" style={{ textAlign: 'center', marginBottom: 10 }}>{errore}</div>}
         <div className="form-group">
           <label className="form-label">Username</label>
           <input className="form-input" value={username} onChange={e => setUsername(e.target.value)} required autoFocus />
@@ -34,7 +34,7 @@ export default function Login() {
           <label className="form-label">Password</label>
           <input className="form-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
         </div>
-        <button className="btn-primary btn-block" type="submit">Accedi</button>
+        <button className="btn btn-primary btn-block" type="submit">Accedi</button>
         <div className="form-link">
           Non hai un account? <Link to="/register">Registrati</Link>
         </div>
