@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar'
 
 export default function Home() {
   const navigate = useNavigate()
+  const ruolo = localStorage.getItem('ruolo')
 
   return (
     <>
@@ -14,6 +15,16 @@ export default function Home() {
             <div className="course-card-name">Ingegneria Informatica</div>
             <div className="course-card-uni">Università di Bologna (UniBo)</div>
           </div>
+
+          {ruolo === 'moderatore' && (
+            <div style={{ marginTop: 32 }}>
+              <div className="page-title">Area Moderatore</div>
+              <div className="course-card" onClick={() => navigate('/moderatore/segnalazioni')}>
+                <div className="course-card-name">Segnalazioni in attesa</div>
+                <div className="course-card-uni">Visualizza e monitora le segnalazioni degli utenti</div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>

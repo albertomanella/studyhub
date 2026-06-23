@@ -26,13 +26,13 @@ export default function PubblicaDocumento() {
     e.preventDefault()
     if (!esameId) { setErrore('Seleziona un esame'); return }
     if (!titolo.trim()) { setErrore('Il titolo è obbligatorio'); return }
+    if (!file) { setErrore('Devi allegare un file'); return }
     setErrore('')
     setCaricamento(true)
     try {
-      const nomeFile = file ? file.name : null
-      const res = await creaContenuto({ tipo: 'documento', titolo, corpo, nomeFile, username, esameId: parseInt(esameId) })
+      const res = await creaContenuto({ tipo: 'documento', titolo, corpo, nomeFile: file.name, username, esameId: parseInt(esameId) })
 
-      if (file && res.id) {
+      if (res.id) {
         const fd = new FormData()
         fd.append('file', file)
         await fetch(`${BASE}/contenuti/${res.id}/file`, { method: 'POST', body: fd })
@@ -79,7 +79,7 @@ export default function PubblicaDocumento() {
             <div className="form-group">
               <label className="form-label">Allega file</label>
               <div className="file-input-wrap">
-                <span>Scegli un file da allegare (opzionale)</span>
+                <span>Scegli un file da allegare</span>
                 <input type="file" onChange={e => setFile(e.target.files[0] || null)} />
                 {file && <div style={{ marginTop: 4, color: '#1a5276' }}>File selezionato: {file.name}</div>}
               </div>

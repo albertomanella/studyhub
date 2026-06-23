@@ -35,3 +35,9 @@ export const creaContenuto = (data) =>
 
 export const valuta = (username, contenutoId, stelle) =>
   request('/valutazioni', { method: 'POST', body: JSON.stringify({ username, contenutoId, stelle }) })
+
+export const segnala = (idContenuto, usernameSegnalante, motivazione) =>
+  request('/segnalazioni', { method: 'POST', body: JSON.stringify({ idContenuto, usernameSegnalante, motivazione }) })
+
+export const getSegnalazioni = (username) =>
+  request(`/moderatore/segnalazioni?username=${encodeURIComponent(username)}`)

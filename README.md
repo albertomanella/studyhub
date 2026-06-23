@@ -1,4 +1,4 @@
-# UniShare — StudyHub Prototype
+# StudyHub
 
 Applicazione web per la condivisione di materiale universitario.
 

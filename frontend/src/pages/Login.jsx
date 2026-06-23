@@ -15,6 +15,7 @@ export default function Login() {
       const res = await login(username, password)
       if (res.errore) { setErrore(res.errore); return }
       localStorage.setItem('username', res.username)
+      localStorage.setItem('ruolo', res.ruolo || 'utente')
       navigate('/home')
     } catch (err) {
       setErrore(err.message)

@@ -19,10 +19,10 @@ export default function Pubblica() {
           <div className="page-title">Pubblica contenuto</div>
           <div className="publish-choice">
             <button className="publish-choice-btn" onClick={() => vai('documento')}>
-              📄 Documento
+              Documento
             </button>
             <button className="publish-choice-btn" onClick={() => vai('consiglio')}>
-              💡 Consiglio
+              Consiglio
             </button>
           </div>
         </div>

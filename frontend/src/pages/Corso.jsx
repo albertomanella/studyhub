@@ -15,6 +15,14 @@ export default function Corso() {
 
   const filtrati = esami.filter(e => e.nome.toLowerCase().includes(cerca.toLowerCase()))
 
+  const perAnno = {
+    1: filtrati.filter(e => e.anno === 1),
+    2: filtrati.filter(e => e.anno === 2),
+    3: filtrati.filter(e => e.anno === 3),
+  }
+
+  const labelAnno = { 1: '1° Anno', 2: '2° Anno', 3: '3° Anno' }
+
   return (
     <>
       <Navbar extra={
@@ -32,13 +40,20 @@ export default function Corso() {
             value={cerca}
             onChange={e => setCerca(e.target.value)}
           />
-          <div className="grid">
-            {filtrati.map(esame => (
-              <div key={esame.id} className="card" onClick={() => navigate(`/esame/${esame.id}`)}>
-                <div className="card-title">{esame.nome}</div>
+          {[1, 2, 3].map(anno => (
+            perAnno[anno].length > 0 && (
+              <div key={anno}>
+                <div className="section-title">{labelAnno[anno]}</div>
+                <div className="grid">
+                  {perAnno[anno].map(esame => (
+                    <div key={esame.id} className="card" onClick={() => navigate(`/esame/${esame.id}`)}>
+                      <div className="card-title">{esame.nome}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            )
+          ))}
         </div>
       </div>
     </>

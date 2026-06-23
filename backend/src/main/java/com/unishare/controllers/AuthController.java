@@ -24,7 +24,7 @@ public class AuthController {
             return Map.of("errore", "Username già esistente");
         }
 
-        Utente u = new Utente(InMemoryStore.nextId(), username, password, nome, cognome);
+        Utente u = new Utente(InMemoryStore.nextId(), username, password, nome, cognome, "utente");
         InMemoryStore.utenti.add(u);
         return Map.of("successo", true);
     }
@@ -43,6 +43,7 @@ public class AuthController {
                     r.put("username", u.getUsername());
                     r.put("nome", u.getNome());
                     r.put("cognome", u.getCognome());
+                    r.put("ruolo", u.getRuolo());
                     return r;
                 })
                 .orElse(Map.of("errore", "Credenziali non valide"));

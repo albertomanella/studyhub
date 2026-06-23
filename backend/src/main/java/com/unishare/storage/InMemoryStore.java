@@ -16,6 +16,7 @@ public class InMemoryStore {
     public static List<Esame> esami = new ArrayList<>();
     public static List<Contenuto> contenuti = new ArrayList<>();
     public static List<Valutazione> valutazioni = new ArrayList<>();
+    public static List<Segnalazione> segnalazioni = new ArrayList<>();
     public static Map<Integer, byte[]> files = new HashMap<>();
     public static int nextId = 1;
 

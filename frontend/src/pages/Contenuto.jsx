@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Stars from '../components/Stars'
-import { getContenuto, valuta } from '../services/api'
+import { getContenuto, valuta, segnala } from '../services/api'
 
 const BASE = 'http://localhost:8081/api'
 
@@ -15,9 +15,14 @@ export default function Contenuto() {
   const { id } = useParams()
   const navigate = useNavigate()
   const username = localStorage.getItem('username')
+  const ruolo = localStorage.getItem('ruolo')
   const [contenuto, setContenuto] = useState(null)
   const [errore, setErrore] = useState('')
   const [ratingMsg, setRatingMsg] = useState('')
+  const [showSegnala, setShowSegnala] = useState(false)
+  const [motivazione, setMotivazione] = useState('')
+  const [segnalaMsg, setSegnalaMsg] = useState('')
+  const [segnalaOk, setSegnalaOk] = useState(false)
 
   useEffect(() => {
     getContenuto(id, username)
@@ -41,6 +46,20 @@ export default function Contenuto() {
       }))
     } catch (err) {
       setRatingMsg(err.message)
+    }
+  }
+
+  async function handleSegnala(e) {
+    e.preventDefault()
+    setSegnalaMsg('')
+    try {
+      const res = await segnala(String(id), username, motivazione)
+      if (res.errore) { setSegnalaMsg(res.errore); return }
+      setSegnalaOk(true)
+      setSegnalaMsg('Segnalazione inviata con successo.')
+      setMotivazione('')
+    } catch (err) {
+      setSegnalaMsg(err.message)
     }
   }
 
@@ -125,8 +144,62 @@ export default function Contenuto() {
               </div>
             </div>
           </div>
+
+          {ruolo === 'utente' && (
+            <div style={{ marginTop: 24 }}>
+              <button
+                className="btn"
+                style={{ background: '#c0392b', color: '#fff', border: 'none' }}
+                onClick={() => { setShowSegnala(true); setSegnalaMsg(''); setSegnalaOk(false) }}
+              >
+                Segnala contenuto
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {showSegnala && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 10, padding: 28, width: 380, maxWidth: '90vw', boxShadow: '0 4px 24px rgba(0,0,0,0.18)'
+          }}>
+            <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 16 }}>Segnala contenuto</div>
+            {segnalaMsg && (
+              <div className={segnalaOk ? undefined : 'form-error'} style={{
+                marginBottom: 12, color: segnalaOk ? '#1a7a2e' : undefined
+              }}>
+                {segnalaMsg}
+              </div>
+            )}
+            {!segnalaOk && (
+              <form onSubmit={handleSegnala}>
+                <div className="form-group">
+                  <label className="form-label">Motivazione *</label>
+                  <textarea
+                    className="form-input"
+                    rows={4}
+                    style={{ resize: 'vertical' }}
+                    value={motivazione}
+                    onChange={e => setMotivazione(e.target.value)}
+                    required
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+                  <button className="btn btn-primary" type="submit">Invia</button>
+                  <button className="btn" type="button" onClick={() => setShowSegnala(false)}>Annulla</button>
+                </div>
+              </form>
+            )}
+            {segnalaOk && (
+              <button className="btn" onClick={() => setShowSegnala(false)}>Chiudi</button>
+            )}
+          </div>
+        </div>
+      )}
     </>
   )
 }

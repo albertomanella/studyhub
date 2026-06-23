@@ -8,6 +8,7 @@ import Contenuto from './pages/Contenuto'
 import Pubblica from './pages/Pubblica'
 import PubblicaDocumento from './pages/PubblicaDocumento'
 import PubblicaConsiglio from './pages/PubblicaConsiglio'
+import ElencoSegnalazioni from './pages/ElencoSegnalazioni'
 
 function PrivateRoute({ children }) {
   return localStorage.getItem('username') ? children : <Navigate to="/" replace />
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/pubblica" element={<PrivateRoute><Pubblica /></PrivateRoute>} />
         <Route path="/pubblica/documento" element={<PrivateRoute><PubblicaDocumento /></PrivateRoute>} />
         <Route path="/pubblica/consiglio" element={<PrivateRoute><PubblicaConsiglio /></PrivateRoute>} />
+        <Route path="/moderatore/segnalazioni" element={<PrivateRoute><ElencoSegnalazioni /></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
