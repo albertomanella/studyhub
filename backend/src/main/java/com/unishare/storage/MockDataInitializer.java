@@ -9,11 +9,6 @@ public class MockDataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // Utenti
-        InMemoryStore.utenti.add(new Utente(InMemoryStore.nextId(), "mario", "mario123!", "Mario", "Rossi", "utente"));
-        InMemoryStore.utenti.add(new Utente(InMemoryStore.nextId(), "giulia", "giulia123!", "Giulia", "Bianchi", "utente"));
-        InMemoryStore.utenti.add(new Utente(InMemoryStore.nextId(), "moderatore", "mod123!", "Luca", "Verdi", "moderatore"));
-
         // Esami — 1° anno
         String[][] primo = {
             {"Fondamenti di Informatica T-1"},

@@ -28,6 +28,15 @@ public class SegnalazioniController {
                     .body(Map.of("errore", "Accesso negato: solo gli utenti possono segnalare"));
         }
 
+        // Verifica che l'utente non stia segnalando un proprio contenuto
+        boolean èAutore = InMemoryStore.contenuti.stream()
+                .anyMatch(c -> String.valueOf(c.getId()).equals(idContenuto)
+                        && c.getUtente().equals(usernameSegnalante));
+        if (èAutore) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("errore", "Non puoi segnalare un tuo contenuto"));
+        }
+
         // Verifica segnalazione duplicata
         boolean giaSegnalato = InMemoryStore.segnalazioni.stream()
                 .anyMatch(s -> s.getIdContenuto().equals(idContenuto)
