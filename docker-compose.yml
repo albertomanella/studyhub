@@ -1,0 +1,14 @@
+services:
+  studyhub_db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: studyhub_user
+      POSTGRES_PASSWORD: studyhub2026
+      POSTGRES_DB: studyhub_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - studyhub_db:/var/lib/postgresql/data
+
+volumes:
+  studyhub_db:
