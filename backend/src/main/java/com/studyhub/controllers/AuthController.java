@@ -1,7 +1,7 @@
-package com.unishare.controllers;
+package com.studyhub.controllers;
 
-import com.unishare.models.Utente;
-import com.unishare.storage.InMemoryStore;
+import com.studyhub.models.Utente;
+import com.studyhub.storage.InMemoryStore;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;

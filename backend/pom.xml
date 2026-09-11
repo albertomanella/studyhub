@@ -11,10 +11,10 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.unishare</groupId>
-    <artifactId>unishare-backend</artifactId>
+    <groupId>com.studyhub</groupId>
+    <artifactId>studyhub-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>unishare-backend</name>
+    <name>studyhub-backend</name>
 
     <properties>
         <java.version>21</java.version>

@@ -1,4 +1,4 @@
-package com.unishare.models;
+package com.studyhub.models;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

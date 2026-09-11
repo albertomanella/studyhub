@@ -1,7 +1,7 @@
-package com.unishare.controllers;
+package com.studyhub.controllers;
 
-import com.unishare.models.Segnalazione;
-import com.unishare.storage.InMemoryStore;
+import com.studyhub.models.Segnalazione;
+import com.studyhub.storage.InMemoryStore;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +20,7 @@ public class SegnalazioniController {
         String motivazione = body.get("motivazione");
 
         // Verifica ruolo utente
-        Optional<com.unishare.models.Utente> utente = InMemoryStore.utenti.stream()
+        Optional<com.studyhub.models.Utente> utente = InMemoryStore.utenti.stream()
                 .filter(u -> u.getUsername().equals(usernameSegnalante))
                 .findFirst();
         if (utente.isEmpty() || !"utente".equals(utente.get().getRuolo())) {
@@ -53,7 +53,7 @@ public class SegnalazioniController {
 
     @GetMapping("/api/moderatore/segnalazioni")
     public ResponseEntity<?> listaSegnalazioni(@RequestParam String username) {
-        Optional<com.unishare.models.Utente> utente = InMemoryStore.utenti.stream()
+        Optional<com.studyhub.models.Utente> utente = InMemoryStore.utenti.stream()
                 .filter(u -> u.getUsername().equals(username))
                 .findFirst();
         if (utente.isEmpty() || !"moderatore".equals(utente.get().getRuolo())) {

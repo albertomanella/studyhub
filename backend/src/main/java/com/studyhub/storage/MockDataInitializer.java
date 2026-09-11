@@ -1,6 +1,6 @@
-package com.unishare.storage;
+package com.studyhub.storage;
 
-import com.unishare.models.*;
+import com.studyhub.models.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 

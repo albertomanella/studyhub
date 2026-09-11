@@ -1,4 +1,4 @@
-package com.unishare.models;
+package com.studyhub.models;
 
 public class Utente {
     private int id;

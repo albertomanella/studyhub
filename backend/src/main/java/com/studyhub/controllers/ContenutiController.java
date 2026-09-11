@@ -1,7 +1,7 @@
-package com.unishare.controllers;
+package com.studyhub.controllers;
 
-import com.unishare.models.Contenuto;
-import com.unishare.storage.InMemoryStore;
+import com.studyhub.models.Contenuto;
+import com.studyhub.storage.InMemoryStore;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
