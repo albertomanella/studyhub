@@ -1,6 +1,7 @@
 package com.studyhub.controllers;
 
 import com.studyhub.models.Valutazione;
+import com.studyhub.repositories.ContenutoRepository;
 import com.studyhub.storage.InMemoryStore;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,6 +12,12 @@ import java.util.Optional;
 @RequestMapping("/api/valutazioni")
 public class ValutazioniController {
 
+    private final ContenutoRepository contenutoRepository;
+
+    public ValutazioniController(ContenutoRepository contenutoRepository) {
+        this.contenutoRepository = contenutoRepository;
+    }
+
     @PostMapping
     public Map<String, Object> valuta(@RequestBody Map<String, Object> body) {
         String username = (String) body.get("username");
@@ -18,10 +25,8 @@ public class ValutazioniController {
         int stelle = (Integer) body.get("stelle");
 
         // Controlla che l'utente non valuti il proprio contenuto
-        Optional<String> autore = InMemoryStore.contenuti.stream()
-                .filter(c -> c.getId() == contenutoId)
-                .map(c -> c.getUtente())
-                .findFirst();
+        Optional<String> autore = contenutoRepository.findById(contenutoId)
+                .map(c -> c.getUtente().getUsername());
         if (autore.isPresent() && autore.get().equals(username)) {
             return Map.of("errore", "Non puoi valutare i tuoi contenuti");
         }
@@ -39,7 +44,6 @@ public class ValutazioniController {
         return Map.of(
                 "successo", true,
                 "nuovaMedia", InMemoryStore.mediaStelle(contenutoId),
-                "numValutazioni", InMemoryStore.numValutazioni(contenutoId)
-        );
+                "numValutazioni", InMemoryStore.numValutazioni(contenutoId));
     }
 }

@@ -20,8 +20,19 @@ public class CorsoDiStudio {
     @OneToMany(mappedBy = "corso", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private List<Esame> esami = new ArrayList<>();
 
+    @ManyToMany(mappedBy = "corsi")
+    private List<Utente> utenti = new ArrayList<>();
+
     public Integer getId() {
         return id;
+    }
+
+    public void addUtente(Utente u) {
+        utenti.add(u);
+    }
+
+    public void removeUtente(Utente u) {
+        utenti.remove(u);
     }
 
     public String getNomeCorso() {

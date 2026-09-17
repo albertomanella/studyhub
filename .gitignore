@@ -12,3 +12,6 @@ frontend/dist/
 .idea/
 *.iml
 .vscode/
+
+# uploads
+backend/uploads/
