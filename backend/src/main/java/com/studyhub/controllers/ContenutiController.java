@@ -3,7 +3,6 @@ package com.studyhub.controllers;
 import com.studyhub.dto.ContenutoDTO;
 import com.studyhub.models.*;
 import com.studyhub.repositories.*;
-import com.studyhub.storage.InMemoryStore;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,16 +26,19 @@ public class ContenutiController {
     private final EsameRepository esameRepository;
     private final UtenteRepository utenteRepository;
     private final EtichettaRepository etichettaRepository;
+    private final ValutazioneRepository valutazioneRepository;
 
     @org.springframework.beans.factory.annotation.Value("${app.upload.dir}")
     private String uploadDir;
 
     public ContenutiController(ContenutoRepository contenutoRepository, EsameRepository esameRepository,
-            UtenteRepository utenteRepository, EtichettaRepository etichettaRepository) {
+            UtenteRepository utenteRepository, EtichettaRepository etichettaRepository,
+            ValutazioneRepository valutazioneRepository) {
         this.contenutoRepository = contenutoRepository;
         this.esameRepository = esameRepository;
         this.utenteRepository = utenteRepository;
         this.etichettaRepository = etichettaRepository;
+        this.valutazioneRepository = valutazioneRepository;
     }
 
     private ContenutoDTO toDTO(Contenuto c) {
@@ -57,6 +59,9 @@ public class ContenutiController {
             tipo = "sconosciuto";
         }
 
+        Double media = valutazioneRepository.mediaStelle(c);
+        int numValutazioni = ((int) valutazioneRepository.countByContenuto(c));
+
         return new ContenutoDTO(
                 c.getId(),
                 tipo,
@@ -64,8 +69,8 @@ public class ContenutiController {
                 c.getDataCreazione().format(FMT),
                 titolo, descrizione, nomeFile,
                 corpo, etichetta,
-                InMemoryStore.mediaStelle(c.getId()),
-                InMemoryStore.numValutazioni(c.getId()));
+                media != null ? media : 0.0,
+                numValutazioni);
     }
 
     @GetMapping

@@ -1,37 +1,70 @@
 package com.studyhub.models;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
+import jakarta.persistence.*;
 
+@Entity
+@Table(name = "segnalazione", uniqueConstraints = @UniqueConstraint(columnNames = { "utente_id", "contenuto_id" }))
 public class Segnalazione {
-    private String idSegnalazione;
-    private String idContenuto;
-    private String usernameSegnalante;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    @Column(length = 256, nullable = false)
     private String motivazione;
-    private String stato;
+
+    // L'utente segnalante
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "utente_id", nullable = false)
+    private Utente utente;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "contenuto_id", nullable = false)
+    private Contenuto contenuto;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private StatoSegnalazione stato;
+
+    @Column(name = "data_segnalazione", nullable = false, updatable = false)
     private LocalDateTime dataSegnalazione;
 
-    public Segnalazione() {}
+    public Segnalazione() {
+    }
 
-    public Segnalazione(String idContenuto, String usernameSegnalante, String motivazione) {
-        this.idSegnalazione = UUID.randomUUID().toString();
-        this.idContenuto = idContenuto;
-        this.usernameSegnalante = usernameSegnalante;
+    public Segnalazione(String motivazione, Utente utente, Contenuto contenuto) {
         this.motivazione = motivazione;
-        this.stato = "attesa";
+        this.utente = utente;
+        this.contenuto = contenuto;
+        this.stato = StatoSegnalazione.ATTESA;
         this.dataSegnalazione = LocalDateTime.now();
     }
 
-    public String getIdSegnalazione() { return idSegnalazione; }
-    public void setIdSegnalazione(String idSegnalazione) { this.idSegnalazione = idSegnalazione; }
-    public String getIdContenuto() { return idContenuto; }
-    public void setIdContenuto(String idContenuto) { this.idContenuto = idContenuto; }
-    public String getUsernameSegnalante() { return usernameSegnalante; }
-    public void setUsernameSegnalante(String usernameSegnalante) { this.usernameSegnalante = usernameSegnalante; }
-    public String getMotivazione() { return motivazione; }
-    public void setMotivazione(String motivazione) { this.motivazione = motivazione; }
-    public String getStato() { return stato; }
-    public void setStato(String stato) { this.stato = stato; }
-    public LocalDateTime getDataSegnalazione() { return dataSegnalazione; }
-    public void setDataSegnalazione(LocalDateTime dataSegnalazione) { this.dataSegnalazione = dataSegnalazione; }
+    public Integer getId() {
+        return id;
+    }
+
+    public String getMotivazione() {
+        return motivazione;
+    }
+
+    public Utente getUtente() {
+        return utente;
+    }
+
+    public Contenuto getContenuto() {
+        return contenuto;
+    }
+
+    public StatoSegnalazione getStato() {
+        return stato;
+    }
+
+    public void setStato(StatoSegnalazione stato) {
+        this.stato = stato;
+    }
+
+    public LocalDateTime getDataSegnalazione() {
+        return dataSegnalazione;
+    }
 }
