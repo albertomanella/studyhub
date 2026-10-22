@@ -5,8 +5,10 @@ import com.studyhub.dto.RegistrationBodyDTO;
 import com.studyhub.dto.UtentePrivatoDTO;
 import com.studyhub.models.CorsoDiStudio;
 import com.studyhub.models.RuoloUtente;
+import com.studyhub.models.Sospensione;
 import com.studyhub.models.Utente;
 import com.studyhub.repositories.CorsoDiStudioRepository;
+import com.studyhub.repositories.SospensioneRepository;
 import com.studyhub.repositories.UtenteRepository;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpStatus;
@@ -25,12 +27,14 @@ public class AuthController {
     private final UtenteRepository utenteRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final CorsoDiStudioRepository corsiRepository;
+    private final SospensioneRepository sospensioneRepository;
 
     public AuthController(UtenteRepository utenteRepository, BCryptPasswordEncoder passwordEncoder,
-            CorsoDiStudioRepository corsiRepository) {
+            CorsoDiStudioRepository corsiRepository, SospensioneRepository sospensioneRepository) {
         this.utenteRepository = utenteRepository;
         this.passwordEncoder = passwordEncoder;
         this.corsiRepository = corsiRepository;
+        this.sospensioneRepository = sospensioneRepository;
     }
 
     private ResponseEntity<?> responseBuilder(Utente u) {
@@ -95,6 +99,13 @@ public class AuthController {
         return utenteRepository.findByUsername(username)
                 .filter(u -> passwordEncoder.matches(password, u.getPassword()))
                 .<ResponseEntity<?>>map(u -> {
+                    Optional<Sospensione> sospensione = sospensioneRepository.findByUtente(u)
+                            .filter(Sospensione::isAttiva);
+                    if (sospensione.isPresent()) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(Map.of("errore",
+                                        "Account sospeso fino al " + sospensione.get().getDataFine()));
+                    }
                     return responseBuilder(u);
                 })
                 .orElse(ResponseEntity.status(HttpStatus.UNAUTHORIZED)
