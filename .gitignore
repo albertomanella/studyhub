@@ -13,5 +13,8 @@ frontend/dist/
 *.iml
 .vscode/
 
-# uploads
-backend/uploads/
+# uploads (relativi alla cartella da cui si avvia il backend)
+uploads/
+
+# configurazione locale con credenziali
+.env
