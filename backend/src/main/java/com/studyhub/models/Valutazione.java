@@ -24,9 +24,9 @@ public class Valutazione {
     }
 
     public Valutazione(int stelle, Utente utente, Contenuto contenuto) {
-        this.stelle = stelle;
         this.utente = utente;
         this.contenuto = contenuto;
+        setStelle(stelle);
     }
 
     public Integer getId() {
