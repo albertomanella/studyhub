@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
-import { getSegnalazioni } from '../services/api'
+import { getSegnalazioni, gestisciSegnalazione } from '../services/api'
 
 function formatData(dt) {
   if (!dt) return ''
@@ -14,16 +14,37 @@ export default function ElencoSegnalazioni() {
   const ruolo = localStorage.getItem('ruolo')
   const [segnalazioni, setSegnalazioni] = useState([])
   const [errore, setErrore] = useState('')
+  const [inCorso, setInCorso] = useState(null)
+  const [esito, setEsito] = useState('')
 
-  useEffect(() => {
-    if (ruolo !== 'moderatore') return
+  function ricarica() {
     getSegnalazioni(username)
       .then(data => {
         if (data.errore) { setErrore(data.errore); return }
         setSegnalazioni(data)
       })
       .catch(err => setErrore(err.message))
+  }
+
+  useEffect(() => {
+    if (ruolo !== 'moderatore') return
+    ricarica()
   }, [])
+
+  async function handleGestisci(id, decisione) {
+    setInCorso(id)
+    setEsito('')
+    try {
+      const res = await gestisciSegnalazione(id, username, decisione)
+      if (res.errore) { setEsito(res.errore); return }
+      setEsito(`Segnalazione #${id}: ${res.stato}`)
+      ricarica()
+    } catch (err) {
+      setEsito(err.message)
+    } finally {
+      setInCorso(null)
+    }
+  }
 
   if (ruolo !== 'moderatore') {
     return (
@@ -43,6 +64,7 @@ export default function ElencoSegnalazioni() {
           <div className="page-title">Segnalazioni in attesa</div>
 
           {errore && <div className="error-banner">{errore}</div>}
+          {esito && <div style={{ margin: '8px 0', color: '#1a5276' }}>{esito}</div>}
 
           {!errore && segnalazioni.length === 0 && (
             <p style={{ color: '#666', marginTop: 16 }}>Nessuna segnalazione in attesa.</p>
@@ -53,21 +75,42 @@ export default function ElencoSegnalazioni() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                 <thead>
                   <tr style={{ background: '#1a5276', color: '#fff' }}>
-                    <th style={th}>ID Segnalazione</th>
-                    <th style={th}>Username segnalante</th>
+                    <th style={th}>ID</th>
+                    <th style={th}>Segnalante</th>
                     <th style={th}>ID Contenuto</th>
                     <th style={th}>Motivazione</th>
                     <th style={th}>Data</th>
+                    <th style={th}>Azioni</th>
                   </tr>
                 </thead>
                 <tbody>
                   {segnalazioni.map((s, i) => (
-                    <tr key={s.idSegnalazione} style={{ background: i % 2 === 0 ? '#f9f9f9' : '#fff' }}>
-                      <td style={td}><span style={{ fontFamily: 'monospace', fontSize: 12 }}>{s.idSegnalazione}</span></td>
+                    <tr key={s.id} style={{ background: i % 2 === 0 ? '#f9f9f9' : '#fff' }}>
+                      <td style={td}><span style={{ fontFamily: 'monospace', fontSize: 12 }}>{s.id}</span></td>
                       <td style={td}>@{s.usernameSegnalante}</td>
                       <td style={td}>{s.idContenuto}</td>
                       <td style={td}>{s.motivazione}</td>
                       <td style={td}>{formatData(s.dataSegnalazione)}</td>
+                      <td style={td}>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            className="btn"
+                            style={{ background: '#1a7a2e', color: '#fff', border: 'none' }}
+                            disabled={inCorso === s.id}
+                            onClick={() => handleGestisci(s.id, 'accolta')}
+                          >
+                            Accogli
+                          </button>
+                          <button
+                            className="btn"
+                            style={{ background: '#c0392b', color: '#fff', border: 'none' }}
+                            disabled={inCorso === s.id}
+                            onClick={() => handleGestisci(s.id, 'respinta')}
+                          >
+                            Respingi
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

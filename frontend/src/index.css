@@ -280,11 +280,13 @@ textarea.form-input {
   font-weight: bold;
   text-transform: uppercase;
 }
-.badge-Esame    { background: #f9ebea; color: #922b21; border: 1px solid #f1948a; }
-.badge-Studio   { background: #eafaf1; color: #1e8449; border: 1px solid #82e0aa; }
-.badge-Materiale{ background: #eaf4fb; color: #1a5276; border: 1px solid #7fb3d3; }
-.badge-Professore{ background: #f5eef8; color: #6c3483; border: 1px solid #c39bd3; }
-.badge-Altro    { background: #f2f3f4; color: #555; border: 1px solid #ccc; }
+/* Nomi reali dell'entità Etichetta (V99__seed_data.sql) */
+.badge-esame    { background: #f9ebea; color: #922b21; border: 1px solid #f1948a; }
+.badge-lezione  { background: #eafaf1; color: #1e8449; border: 1px solid #82e0aa; }
+.badge-teoria   { background: #eaf4fb; color: #1a5276; border: 1px solid #7fb3d3; }
+.badge-esercizio{ background: #fef5e7; color: #9a6d00; border: 1px solid #f5cb6e; }
+.badge-professore{ background: #f5eef8; color: #6c3483; border: 1px solid #c39bd3; }
+.badge-altro    { background: #f2f3f4; color: #555; border: 1px solid #ccc; }
 
 /* ---- STARS ---- */
 .stars {

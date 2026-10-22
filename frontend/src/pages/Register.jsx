@@ -29,7 +29,10 @@ export default function Register() {
     if (Object.keys(v).length) return
     setApiErr('')
     try {
-      const res = await register({ username: f.username, password: f.password, nome: f.nome, cognome: f.cognome })
+      const res = await register({
+        username: f.username, password: f.password, nome: f.nome, cognome: f.cognome,
+        email: f.email, idCorsi: [1] // Ingegneria Informatica @ UniBo, unico corso seedato — form ha ateneo/corso fissi
+      })
       if (res.errore) { setApiErr(res.errore); return }
       navigate('/')
     } catch (err) {

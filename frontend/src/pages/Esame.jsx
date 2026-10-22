@@ -28,7 +28,7 @@ export default function Esame() {
       if (e) setNomeEsame(e.nome)
     }).catch(() => {})
 
-    getContenuti(id, username)
+    getContenuti(id)
       .then(setContenuti)
       .catch(err => setErrore(err.message))
   }, [id])
@@ -44,7 +44,7 @@ export default function Esame() {
           {(c.corpo || '').slice(0, 100)}{(c.corpo || '').length > 100 ? '...' : ''}
         </div>
         <div className="card-meta">
-          <span>@{c.utente}</span>
+          <span>@{c.autore}</span>
           <span>{formatData(c.dataCreazione)}</span>
           {c.nomeFile && <span>📎 {c.nomeFile}</span>}
           <Stars value={Math.round(c.mediaStelle)} size="sm" />
@@ -62,7 +62,7 @@ export default function Esame() {
           {(c.corpo || '').slice(0, 150)}{(c.corpo || '').length > 150 ? '...' : ''}
         </div>
         <div className="card-meta">
-          <span>@{c.utente}</span>
+          <span>@{c.autore}</span>
           <span>{formatData(c.dataCreazione)}</span>
           <Stars value={Math.round(c.mediaStelle)} size="sm" />
           <span>{stelleInfo(c)}</span>

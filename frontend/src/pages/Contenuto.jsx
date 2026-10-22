@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Stars from '../components/Stars'
-import { getContenuto, valuta, segnala } from '../services/api'
+import { getContenuto, valuta, segnala, eliminaContenuto } from '../services/api'
 
 const BASE = 'http://localhost:8081/api'
 
@@ -24,8 +24,10 @@ export default function Contenuto() {
   const [segnalaMsg, setSegnalaMsg] = useState('')
   const [segnalaOk, setSegnalaOk] = useState(false)
 
+  const [eliminando, setEliminando] = useState(false)
+
   useEffect(() => {
-    getContenuto(id, username)
+    getContenuto(id)
       .then(data => {
         if (data.errore) { setErrore(data.errore); return }
         setContenuto(data)
@@ -70,6 +72,20 @@ export default function Contenuto() {
     a.click()
   }
 
+  async function handleElimina() {
+    if (!window.confirm('Eliminare definitivamente questo contenuto?')) return
+    setEliminando(true)
+    try {
+      const res = await eliminaContenuto(id, username)
+      if (res.errore) { setErrore(res.errore); return }
+      navigate(-1)
+    } catch (err) {
+      setErrore(err.message)
+    } finally {
+      setEliminando(false)
+    }
+  }
+
   if (errore) return (
     <>
       <Navbar />
@@ -84,8 +100,8 @@ export default function Contenuto() {
     </>
   )
 
-  const sonoAutore = contenuto.utente === username
-  const stelleAttuali = sonoAutore ? 0 : (contenuto.valutazioneCorrente > 0 ? contenuto.valutazioneCorrente : 0)
+  const sonoAutore = contenuto.autore === username
+  const stelleAttuali = 0
 
   return (
     <>
@@ -108,7 +124,7 @@ export default function Contenuto() {
             )}
 
             <div className="detail-meta">
-              <span>Autore: <strong>@{contenuto.utente}</strong></span>
+              <span>Autore: <strong>@{contenuto.autore}</strong></span>
               <span>{formatData(contenuto.dataCreazione)}</span>
               <span style={{ textTransform: 'capitalize', color: '#888' }}>[{contenuto.tipo}]</span>
             </div>
@@ -117,14 +133,12 @@ export default function Contenuto() {
 
             {contenuto.tipo === 'documento' && (
               <div style={{ marginBottom: 16 }}>
-                {contenuto.hasFile ? (
+                {contenuto.nomeFile ? (
                   <button className="btn btn-primary" onClick={handleDownload}>
                     ⬇ Scarica — {contenuto.nomeFile}
                   </button>
                 ) : (
-                  <span style={{ fontSize: 12, color: '#999' }}>
-                    {contenuto.nomeFile ? `File indicato: ${contenuto.nomeFile} (non caricato)` : 'Nessun file allegato'}
-                  </span>
+                  <span style={{ fontSize: 12, color: '#999' }}>Nessun file allegato</span>
                 )}
               </div>
             )}
@@ -145,7 +159,20 @@ export default function Contenuto() {
             </div>
           </div>
 
-          {ruolo === 'utente' && (
+          {sonoAutore && (
+            <div style={{ marginTop: 24 }}>
+              <button
+                className="btn"
+                style={{ background: '#c0392b', color: '#fff', border: 'none' }}
+                onClick={handleElimina}
+                disabled={eliminando}
+              >
+                {eliminando ? 'Eliminazione...' : 'Elimina contenuto'}
+              </button>
+            </div>
+          )}
+
+          {!sonoAutore && ruolo === 'utente' && (
             <div style={{ marginTop: 24 }}>
               <button
                 className="btn"

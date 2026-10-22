@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Navbar from '../components/Navbar'
-import { getEsami, creaContenuto } from '../services/api'
-
-const ETICHETTE = ['Esame', 'Studio', 'Materiale', 'Professore', 'Altro']
+import { getEsami, getEtichette, creaConsiglio } from '../services/api'
 
 export default function PubblicaConsiglio() {
   const navigate = useNavigate()
@@ -11,22 +9,31 @@ export default function PubblicaConsiglio() {
   const username = localStorage.getItem('username')
 
   const [esami, setEsami] = useState([])
+  const [etichette, setEtichette] = useState([])
   const [esameId, setEsameId] = useState(params.get('esame_id') || '')
-  const [etichetta, setEtichetta] = useState('Esame')
+  const [etichettaId, setEtichettaId] = useState('')
   const [corpo, setCorpo] = useState('')
   const [errore, setErrore] = useState('')
 
   useEffect(() => {
     getEsami().then(setEsami).catch(() => {})
+    getEtichette().then(data => {
+      setEtichette(data)
+      if (data.length && !etichettaId) setEtichettaId(String(data[0].id))
+    }).catch(() => {})
   }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!esameId) { setErrore('Seleziona un esame'); return }
+    if (!etichettaId) { setErrore('Seleziona una categoria'); return }
     if (!corpo.trim()) { setErrore('Il testo è obbligatorio'); return }
     setErrore('')
     try {
-      await creaContenuto({ tipo: 'consiglio', titolo: null, corpo, etichetta, nomeFile: null, username, esameId: parseInt(esameId) })
+      const res = await creaConsiglio({
+        corpo, esameId: parseInt(esameId), etichettaId: parseInt(etichettaId), username
+      })
+      if (res.errore) { setErrore(res.errore); return }
       navigate(`/esame/${esameId}`)
     } catch (err) {
       setErrore(err.message)
@@ -52,8 +59,8 @@ export default function PubblicaConsiglio() {
 
             <div className="form-group">
               <label className="form-label">Categoria</label>
-              <select className="form-input" value={etichetta} onChange={e => setEtichetta(e.target.value)}>
-                {ETICHETTE.map(et => <option key={et} value={et}>{et}</option>)}
+              <select className="form-input" value={etichettaId} onChange={e => setEtichettaId(e.target.value)}>
+                {etichette.map(et => <option key={et.id} value={et.id}>{et.nome}</option>)}
               </select>
             </div>
 

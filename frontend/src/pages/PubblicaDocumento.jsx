@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Navbar from '../components/Navbar'
-import { getEsami, creaContenuto } from '../services/api'
-
-const BASE = 'http://localhost:8081/api'
+import { getEsami, creaDocumento } from '../services/api'
 
 export default function PubblicaDocumento() {
   const navigate = useNavigate()
@@ -30,13 +28,15 @@ export default function PubblicaDocumento() {
     setErrore('')
     setCaricamento(true)
     try {
-      const res = await creaContenuto({ tipo: 'documento', titolo, corpo, nomeFile: file.name, username, esameId: parseInt(esameId) })
+      const fd = new FormData()
+      fd.append('titolo', titolo)
+      fd.append('descrizione', corpo)
+      fd.append('esameId', esameId)
+      fd.append('username', username)
+      fd.append('file', file)
 
-      if (res.id) {
-        const fd = new FormData()
-        fd.append('file', file)
-        await fetch(`${BASE}/contenuti/${res.id}/file`, { method: 'POST', body: fd })
-      }
+      const res = await creaDocumento(fd)
+      if (res.errore) { setErrore(res.errore); return }
 
       navigate(`/esame/${esameId}`)
     } catch (err) {
