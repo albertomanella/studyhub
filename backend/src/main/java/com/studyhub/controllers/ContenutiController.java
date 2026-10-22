@@ -3,6 +3,7 @@ package com.studyhub.controllers;
 import com.studyhub.dto.ContenutoDTO;
 import com.studyhub.models.*;
 import com.studyhub.repositories.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -135,6 +136,20 @@ public class ContenutiController {
         Consiglio consiglio = new Consiglio(utente, esame, corpo, etichetta);
         contenutoRepository.save(consiglio);
         return ResponseEntity.ok(toDTO(consiglio));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminaContenuto(@PathVariable int id, @RequestParam String username) {
+        Contenuto c = contenutoRepository.findById(id).orElse(null);
+        if (c == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!c.getUtente().getUsername().equals(username)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("errore", "Puoi eliminare solo i tuoi contenuti"));
+        }
+        contenutoRepository.delete(c);
+        return ResponseEntity.ok(Map.of("successo", true));
     }
 
     @GetMapping("/{id}/file")
