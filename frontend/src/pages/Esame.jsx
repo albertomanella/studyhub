@@ -17,19 +17,18 @@ function stelleInfo(c) {
 export default function Esame() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const username = localStorage.getItem('username')
   const [nomeEsame, setNomeEsame] = useState('')
   const [contenuti, setContenuti] = useState([])
   const [errore, setErrore] = useState('')
 
   useEffect(() => {
     getEsami().then(esami => {
-      const e = esami.find(x => x.id === parseInt(id))
+      const e = Array.isArray(esami) && esami.find(x => x.id === parseInt(id))
       if (e) setNomeEsame(e.nome)
     }).catch(() => {})
 
     getContenuti(id)
-      .then(setContenuti)
+      .then(data => data.errore ? setErrore(data.errore) : setContenuti(data))
       .catch(err => setErrore(err.message))
   }, [id])
 

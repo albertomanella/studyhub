@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, Navigate } from 'react-router-dom'
 import { login } from '../services/api'
+import { useAuth } from '../auth/AuthContext'
 
 export default function Login() {
   const navigate = useNavigate()
+  const { utente, setUtente } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [errore, setErrore] = useState('')
@@ -14,13 +16,14 @@ export default function Login() {
     try {
       const res = await login(username, password)
       if (res.errore) { setErrore(res.errore); return }
-      localStorage.setItem('username', res.username)
-      localStorage.setItem('ruolo', (res.ruolo || 'utente').toLowerCase())
+      setUtente(res)
       navigate('/home')
     } catch (err) {
       setErrore(err.message)
     }
   }
+
+  if (utente) return <Navigate to="/home" replace />
 
   return (
     <div style={{ background: '#f0f0f0', minHeight: '100vh', paddingTop: 40 }}>

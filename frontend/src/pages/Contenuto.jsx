@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Stars from '../components/Stars'
-import { getContenuto, valuta, segnala, eliminaContenuto } from '../services/api'
-
-const BASE = 'http://localhost:8081/api'
+import { getContenuto, valuta, segnala, eliminaContenuto, fileUrl } from '../services/api'
+import { useAuth } from '../auth/AuthContext'
 
 function formatData(str) {
   if (!str) return ''
@@ -14,8 +13,7 @@ function formatData(str) {
 export default function Contenuto() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const username = localStorage.getItem('username')
-  const ruolo = localStorage.getItem('ruolo')
+  const { utente } = useAuth()
   const [contenuto, setContenuto] = useState(null)
   const [errore, setErrore] = useState('')
   const [ratingMsg, setRatingMsg] = useState('')
@@ -38,7 +36,7 @@ export default function Contenuto() {
   async function handleRate(stelle) {
     setRatingMsg('')
     try {
-      const res = await valuta(username, parseInt(id), stelle)
+      const res = await valuta(parseInt(id), stelle)
       if (res.errore) { setRatingMsg(res.errore); return }
       setContenuto(prev => ({
         ...prev,
@@ -55,7 +53,7 @@ export default function Contenuto() {
     e.preventDefault()
     setSegnalaMsg('')
     try {
-      const res = await segnala(String(id), username, motivazione)
+      const res = await segnala(String(id), motivazione)
       if (res.errore) { setSegnalaMsg(res.errore); return }
       setSegnalaOk(true)
       setSegnalaMsg('Segnalazione inviata con successo.')
@@ -67,7 +65,7 @@ export default function Contenuto() {
 
   function handleDownload() {
     const a = document.createElement('a')
-    a.href = `${BASE}/contenuti/${id}/file`
+    a.href = fileUrl(id)
     a.download = contenuto.nomeFile || 'file'
     a.click()
   }
@@ -76,7 +74,7 @@ export default function Contenuto() {
     if (!window.confirm('Eliminare definitivamente questo contenuto?')) return
     setEliminando(true)
     try {
-      const res = await eliminaContenuto(id, username)
+      const res = await eliminaContenuto(id)
       if (res.errore) { setErrore(res.errore); return }
       navigate(-1)
     } catch (err) {
@@ -100,7 +98,7 @@ export default function Contenuto() {
     </>
   )
 
-  const sonoAutore = contenuto.autore === username
+  const sonoAutore = contenuto.autore === utente.username
   const stelleAttuali = 0
 
   return (
@@ -172,7 +170,7 @@ export default function Contenuto() {
             </div>
           )}
 
-          {!sonoAutore && ruolo === 'utente' && (
+          {!sonoAutore && utente.ruolo === 'UTENTE' && (
             <div style={{ marginTop: 24 }}>
               <button
                 className="btn"

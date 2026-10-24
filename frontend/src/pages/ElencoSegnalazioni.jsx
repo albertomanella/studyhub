@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { getSegnalazioni, gestisciSegnalazione } from '../services/api'
+import { useAuth } from '../auth/AuthContext'
 
 function formatData(dt) {
   if (!dt) return ''
@@ -10,15 +11,15 @@ function formatData(dt) {
 
 export default function ElencoSegnalazioni() {
   const navigate = useNavigate()
-  const username = localStorage.getItem('username')
-  const ruolo = localStorage.getItem('ruolo')
+  const { utente } = useAuth()
+  const isModeratore = utente.ruolo === 'MODERATORE'
   const [segnalazioni, setSegnalazioni] = useState([])
   const [errore, setErrore] = useState('')
   const [inCorso, setInCorso] = useState(null)
   const [esito, setEsito] = useState('')
 
   function ricarica() {
-    getSegnalazioni(username)
+    getSegnalazioni()
       .then(data => {
         if (data.errore) { setErrore(data.errore); return }
         setSegnalazioni(data)
@@ -27,7 +28,7 @@ export default function ElencoSegnalazioni() {
   }
 
   useEffect(() => {
-    if (ruolo !== 'moderatore') return
+    if (!isModeratore) return
     ricarica()
   }, [])
 
@@ -35,7 +36,7 @@ export default function ElencoSegnalazioni() {
     setInCorso(id)
     setEsito('')
     try {
-      const res = await gestisciSegnalazione(id, username, decisione)
+      const res = await gestisciSegnalazione(id, decisione)
       if (res.errore) { setEsito(res.errore); return }
       setEsito(`Segnalazione #${id}: ${res.stato}`)
       ricarica()
@@ -46,7 +47,7 @@ export default function ElencoSegnalazioni() {
     }
   }
 
-  if (ruolo !== 'moderatore') {
+  if (!isModeratore) {
     return (
       <>
         <Navbar />
