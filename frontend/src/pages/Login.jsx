@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { utente, setUtente } = useAuth()
+  const { utente, setUtente, avviso, setAvviso } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [errore, setErrore] = useState('')
@@ -13,6 +13,7 @@ export default function Login() {
   async function handleSubmit(e) {
     e.preventDefault()
     setErrore('')
+    setAvviso('')
     try {
       const res = await login(username, password)
       if (res.errore) { setErrore(res.errore); return }
@@ -29,7 +30,9 @@ export default function Login() {
     <div style={{ background: '#f0f0f0', minHeight: '100vh', paddingTop: 40 }}>
       <form className="form-wrap" onSubmit={handleSubmit}>
         <div className="form-title">StudyHub — Accedi</div>
-        {errore && <div className="form-error" style={{ textAlign: 'center', marginBottom: 10 }}>{errore}</div>}
+        {(errore || avviso) && (
+          <div className="form-error" style={{ textAlign: 'center', marginBottom: 10 }}>{errore || avviso}</div>
+        )}
         <div className="form-group">
           <label className="form-label">Username</label>
           <input className="form-input" value={username} onChange={e => setUsername(e.target.value)} required autoFocus />

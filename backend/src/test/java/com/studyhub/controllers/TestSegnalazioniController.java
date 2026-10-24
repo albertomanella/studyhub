@@ -87,6 +87,14 @@ public class TestSegnalazioniController {
         return contenutoRepository.save(c);
     }
 
+    // Si contano solo le righe di questo utente: il database di sviluppo può
+    // contenere altre sospensioni
+    private long sospensioniDi(Utente utente) {
+        return sospensioneRepository.findAll().stream()
+                .filter(s -> s.getUtente().getId().equals(utente.getId()))
+                .count();
+    }
+
     private ResultActions segnala(Utente segnalante, Contenuto contenuto) throws Exception {
         return mockMvc.perform(post("/api/segnalazioni")
                 .with(user(segnalante.getUsername()).roles(segnalante.getRuolo().name())).with(csrf())
@@ -130,7 +138,11 @@ public class TestSegnalazioniController {
         segnala(segnalante, contenuto).andExpect(status().isCreated());
         segnala(segnalante, contenuto).andExpect(status().isConflict());
 
-        assertEquals(1, segnalazioneRepository.count());
+        // Si contano solo le segnalazioni di questo test: il database di
+        // sviluppo può contenere altri dati
+        assertEquals(1, segnalazioneRepository.findAll().stream()
+                .filter(s -> s.getContenuto().getId().equals(contenuto.getId()))
+                .count());
     }
 
     @Test
@@ -186,6 +198,10 @@ public class TestSegnalazioniController {
         Sospensione sospensione = sospensioneRepository.findByUtente(autore).orElseThrow();
         assertTrue(sospensione.isAttiva());
         assertEquals(LocalDate.now().plusDays(7), sospensione.getDataFine());
+
+        // La sospensione automatica vale subito, anche per una sessione già aperta
+        mockMvc.perform(get("/api/esami").with(user(autore.getUsername()).roles("UTENTE")))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -214,7 +230,7 @@ public class TestSegnalazioniController {
         accogliSegnalazione(quartoSegnalante, quartoContenuto, moderatore);
 
         Sospensione dopoQuarto = sospensioneRepository.findByUtente(autore).orElseThrow();
-        assertEquals(1, sospensioneRepository.count());
+        assertEquals(1, sospensioniDi(autore));
         assertEquals(LocalDate.now().plusDays(7), dopoQuarto.getDataFine());
         assertTrue(dopoQuarto.getMotivazione().contains("4"));
     }
@@ -227,7 +243,7 @@ public class TestSegnalazioniController {
 
         sospendi(moderatore, utente, 5).andExpect(status().isConflict());
 
-        assertEquals(1, sospensioneRepository.count());
+        assertEquals(1, sospensioniDi(utente));
     }
 
     @Test
@@ -241,7 +257,7 @@ public class TestSegnalazioniController {
         // Il vincolo di unicità su utente_id impedirebbe comunque una seconda
         // riga: qui verifichiamo che il comportamento sia il rinnovo voluto,
         // non solo che non sia esplosa un'eccezione di violazione del vincolo.
-        assertEquals(1, sospensioneRepository.count());
+        assertEquals(1, sospensioniDi(utente));
         assertEquals(LocalDate.now().plusDays(5),
                 sospensioneRepository.findByUtente(utente).orElseThrow().getDataFine());
     }

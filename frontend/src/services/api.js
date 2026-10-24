@@ -2,8 +2,9 @@
 // (vite.config.js), quindi il cookie di sessione viaggia automaticamente.
 const BASE = '/api'
 
-// Chiamata quando il server risponde 401 (sessione assente o scaduta):
-// AuthContext la usa per riportare l'utente al login.
+// Chiamata quando la sessione non è più valida: 401 (assente o scaduta) o
+// account sospeso. AuthContext la usa per riportare l'utente al login,
+// con un eventuale messaggio da mostrare.
 let onUnauthorized = () => {}
 export function setOnUnauthorized(fn) {
   onUnauthorized = fn
@@ -45,10 +46,12 @@ async function request(path, options = {}) {
     throw new Error('Backend non raggiungibile. Assicurati che il server sia avviato.')
   }
 
-  if (res.status === 401) onUnauthorized()
-
   const isJson = (res.headers.get('content-type') || '').includes('application/json')
   const data = isJson ? await res.json() : null
+
+  if (res.status === 401) onUnauthorized()
+  // Utente sospeso mentre era collegato: il backend ha già chiuso la sessione
+  if (res.status === 403 && data?.codice === 'ACCOUNT_SOSPESO') onUnauthorized(data.errore)
   if (res.ok) return data ?? {}
   return { errore: data?.errore || MESSAGGI_ERRORE[res.status] || `Errore del server (${res.status}).` }
 }

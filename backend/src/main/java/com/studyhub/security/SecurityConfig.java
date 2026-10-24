@@ -1,5 +1,7 @@
 package com.studyhub.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.studyhub.repositories.SospensioneRepository;
 import com.studyhub.repositories.UtenteRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +19,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
@@ -67,7 +70,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
-            SecurityContextRepository securityContextRepository) throws Exception {
+            SecurityContextRepository securityContextRepository, UtenteRepository utenteRepository,
+            SospensioneRepository sospensioneRepository, ObjectMapper objectMapper) throws Exception {
         http
                 .cors(Customizer.withDefaults())
                 // CSRF con "double submit cookie": il token arriva nel cookie
@@ -80,6 +84,9 @@ public class SecurityConfig {
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
+                // Dopo aver letto la sessione, prima delle regole di accesso
+                .addFilterBefore(new SospensioneFilter(utenteRepository, sospensioneRepository, objectMapper),
+                        AuthorizationFilter.class)
                 // Niente salvataggio della richiesta rifiutata per il redirect
                 // dopo il login (utile solo alle pagine HTML): così una sessione
                 // nasce solo al login, non a ogni richiesta anonima.
