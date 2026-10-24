@@ -1,14 +1,17 @@
 package com.studyhub.controllers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.studyhub.models.*;
 import com.studyhub.repositories.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -16,21 +19,28 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 // Stesso impianto dei test unitari proposti nel documento di progettazione
 // originale (Piano del collaudo, pag. 69-70 e 96-97): un setUp() che costruisce
-// a mano Ateneo -> CorsoDiStudio -> Esame -> Utente, e chiamate dirette ai
-// metodi del controller, con verifica del risultato. L'unica differenza reale
-// è che qui non esiste un DbMock: il controller è quello vero, autowired da
-// Spring, sul database Postgres di sviluppo; ogni test è avvolto in una
-// transazione che viene sempre annullata (@Transactional), quindi non lascia
-// dati residui, come farebbe invece un DbMock ricreato ad ogni @BeforeEach.
+// a mano Ateneo -> CorsoDiStudio -> Esame -> Utente, poi le operazioni da
+// verificare. Le richieste passano dall'intera catena HTTP e di sicurezza
+// (MockMvc), autenticate come un utente specifico; ogni test è avvolto in una
+// transazione annullata a fine esecuzione (@Transactional).
 @SpringBootTest
+@AutoConfigureMockMvc
 @Transactional
 public class TestSegnalazioniController {
 
     @Autowired
-    private SegnalazioniController segnalazioniController;
+    private MockMvc mockMvc;
+    @Autowired
+    private ObjectMapper objectMapper;
     @Autowired
     private UtenteRepository utenteRepository;
     @Autowired
@@ -48,7 +58,7 @@ public class TestSegnalazioniController {
     @Autowired
     private SospensioneRepository sospensioneRepository;
     @Autowired
-    private BCryptPasswordEncoder passwordEncoder;
+    private PasswordEncoder passwordEncoder;
 
     private CorsoDiStudio corso;
     private Esame esame;
@@ -77,47 +87,81 @@ public class TestSegnalazioniController {
         return contenutoRepository.save(c);
     }
 
-    private Segnalazione accogliSegnalazione(Utente segnalante, Contenuto contenuto, Utente moderatore) {
-        Map<String, String> segnalazioneBody = Map.of(
-                "idContenuto", contenuto.getId().toString(),
-                "usernameSegnalante", segnalante.getUsername(),
-                "motivazione", "Contenuto inadeguato");
-        segnalazioniController.segnala(segnalazioneBody);
+    private ResultActions segnala(Utente segnalante, Contenuto contenuto) throws Exception {
+        return mockMvc.perform(post("/api/segnalazioni")
+                .with(user(segnalante.getUsername()).roles(segnalante.getRuolo().name())).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                        "idContenuto", contenuto.getId().toString(),
+                        "motivazione", "Contenuto inadeguato"))));
+    }
+
+    private ResultActions sospendi(Utente moderatore, Utente utente, int giorni) throws Exception {
+        return mockMvc.perform(post("/api/moderatore/sospensioni")
+                .with(user(moderatore.getUsername()).roles("MODERATORE")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                        "usernameUtente", utente.getUsername(),
+                        "motivazione", "Comportamento scorretto",
+                        "giorni", giorni))));
+    }
+
+    private void accogliSegnalazione(Utente segnalante, Contenuto contenuto, Utente moderatore) throws Exception {
+        segnala(segnalante, contenuto).andExpect(status().isCreated());
 
         Segnalazione segnalazione = segnalazioneRepository.findAll().stream()
                 .filter(s -> s.getUtente().getId().equals(segnalante.getId())
                         && s.getContenuto().getId().equals(contenuto.getId()))
                 .findFirst().orElseThrow();
 
-        Map<String, String> gestioneBody = Map.of(
-                "usernameModeratore", moderatore.getUsername(),
-                "esito", "accolta");
-        segnalazioniController.gestisciSegnalazione(segnalazione.getId(), gestioneBody);
-        return segnalazione;
+        mockMvc.perform(patch("/api/moderatore/segnalazioni/{id}", segnalazione.getId())
+                .with(user(moderatore.getUsername()).roles("MODERATORE")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("esito", "accolta"))))
+                .andExpect(status().isOk());
     }
 
     @Test
-    public void testSegnalazioneDuplicata_ritorna409() {
+    public void testSegnalazioneDuplicata_ritorna409() throws Exception {
         Utente autore = creaUtente("autore1", RuoloUtente.UTENTE);
         Utente segnalante = creaUtente("segnalante1", RuoloUtente.UTENTE);
         Contenuto contenuto = creaConsiglioDi(autore);
 
-        Map<String, String> body = Map.of(
-                "idContenuto", contenuto.getId().toString(),
-                "usernameSegnalante", segnalante.getUsername(),
-                "motivazione", "Contenuto inadeguato");
-
-        ResponseEntity<Map<String, Object>> prima = segnalazioniController.segnala(body);
-        assertEquals(HttpStatus.CREATED, prima.getStatusCode());
-
-        ResponseEntity<Map<String, Object>> seconda = segnalazioniController.segnala(body);
-        assertEquals(HttpStatus.CONFLICT, seconda.getStatusCode());
+        segnala(segnalante, contenuto).andExpect(status().isCreated());
+        segnala(segnalante, contenuto).andExpect(status().isConflict());
 
         assertEquals(1, segnalazioneRepository.count());
     }
 
     @Test
-    public void testSospensioneAutomatica_scattaAlTerzoAvvertimento_nonPrima() {
+    public void testSegnalazione_daModeratore_ritorna403() throws Exception {
+        Utente autore = creaUtente("autore2", RuoloUtente.UTENTE);
+        Utente moderatore = creaUtente("modSegnala", RuoloUtente.MODERATORE);
+
+        segnala(moderatore, creaConsiglioDi(autore)).andExpect(status().isForbidden());
+    }
+
+    @Test
+    public void testEndpointModeratore_conRuoloUtente_ritorna403() throws Exception {
+        Utente utente = creaUtente("utenteCurioso", RuoloUtente.UTENTE);
+        Utente bersaglio = creaUtente("bersaglio", RuoloUtente.UTENTE);
+
+        mockMvc.perform(get("/api/moderatore/segnalazioni")
+                .with(user(utente.getUsername()).roles("UTENTE")))
+                .andExpect(status().isForbidden());
+
+        // Un utente normale non può sospendere nessuno, qualunque cosa mandi nel corpo
+        mockMvc.perform(post("/api/moderatore/sospensioni")
+                .with(user(utente.getUsername()).roles("UTENTE")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of(
+                        "usernameUtente", bersaglio.getUsername(), "motivazione", "x", "giorni", 30))))
+                .andExpect(status().isForbidden());
+        assertTrue(sospensioneRepository.findByUtente(bersaglio).isEmpty());
+    }
+
+    @Test
+    public void testSospensioneAutomatica_scattaAlTerzoAvvertimento_nonPrima() throws Exception {
         Utente moderatore = creaUtente("mod1", RuoloUtente.MODERATORE);
         Utente autore = creaUtente("autoreRischio", RuoloUtente.UTENTE);
 
@@ -145,7 +189,7 @@ public class TestSegnalazioniController {
     }
 
     @Test
-    public void testSospensioneAutomatica_siRinnovaAncheAlQuartoAvvertimento() {
+    public void testSospensioneAutomatica_siRinnovaAncheAlQuartoAvvertimento() throws Exception {
         // R21F: "ogni nuovo avvertimento, a partire dal terzo" -- non solo i
         // multipli di 3. Il quarto avvertimento deve rinnovare la sospensione,
         // non lasciarla invariata.
@@ -176,38 +220,24 @@ public class TestSegnalazioniController {
     }
 
     @Test
-    public void testSospensioneManuale_suUtenteGiaSospeso_ritorna409() {
+    public void testSospensioneManuale_suUtenteGiaSospeso_ritorna409() throws Exception {
         Utente moderatore = creaUtente("mod3", RuoloUtente.MODERATORE);
         Utente utente = creaUtente("utenteSospeso", RuoloUtente.UTENTE);
         sospensioneRepository.save(new Sospensione(utente, "Sospensione precedente", LocalDate.now().plusDays(3)));
 
-        Map<String, Object> body = Map.of(
-                "usernameModeratore", moderatore.getUsername(),
-                "usernameUtente", utente.getUsername(),
-                "motivazione", "Comportamento scorretto",
-                "giorni", 5);
+        sospendi(moderatore, utente, 5).andExpect(status().isConflict());
 
-        ResponseEntity<Map<String, Object>> risposta = segnalazioniController.sospendiUtente(body);
-
-        assertEquals(HttpStatus.CONFLICT, risposta.getStatusCode());
         assertEquals(1, sospensioneRepository.count());
     }
 
     @Test
-    public void testSospensioneManuale_suSospensioneScaduta_rinnovaStessaRiga() {
+    public void testSospensioneManuale_suSospensioneScaduta_rinnovaStessaRiga() throws Exception {
         Utente moderatore = creaUtente("mod4", RuoloUtente.MODERATORE);
         Utente utente = creaUtente("utenteRecidivo", RuoloUtente.UTENTE);
         sospensioneRepository.save(new Sospensione(utente, "Sospensione scaduta", LocalDate.now().minusDays(1)));
 
-        Map<String, Object> body = Map.of(
-                "usernameModeratore", moderatore.getUsername(),
-                "usernameUtente", utente.getUsername(),
-                "motivazione", "Nuova infrazione",
-                "giorni", 5);
+        sospendi(moderatore, utente, 5).andExpect(status().isOk());
 
-        ResponseEntity<Map<String, Object>> risposta = segnalazioniController.sospendiUtente(body);
-
-        assertEquals(HttpStatus.OK, risposta.getStatusCode());
         // Il vincolo di unicità su utente_id impedirebbe comunque una seconda
         // riga: qui verifichiamo che il comportamento sia il rinnovo voluto,
         // non solo che non sia esplosa un'eccezione di violazione del vincolo.
