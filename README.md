@@ -33,3 +33,16 @@ npm run dev
 ```
 
 Apri http://localhost:5173 e registra un nuovo utente.
+
+## Moderatori
+
+La registrazione crea solo utenti normali. Per rendere moderatore un utente
+già registrato, aggiungi il suo username in `.env` (più nomi separati da
+virgola) e riavvia il backend:
+
+```bash
+MODERATORS=mario,giulia
+```
+
+Il nuovo ruolo vale dal login successivo. Togliere un nome dalla lista non
+revoca il ruolo.
