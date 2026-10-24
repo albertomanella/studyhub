@@ -8,13 +8,18 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [utente, setUtente] = useState(null)
   const [caricamento, setCaricamento] = useState(true)
+  // Messaggio da mostrare nella pagina di login (es. account sospeso)
+  const [avviso, setAvviso] = useState('')
 
   useEffect(() => {
     // Residui della versione precedente, che salvava username e ruolo nel browser
     localStorage.removeItem('username')
     localStorage.removeItem('ruolo')
 
-    setOnUnauthorized(() => setUtente(null))
+    setOnUnauthorized(messaggio => {
+      setUtente(null)
+      if (messaggio) setAvviso(messaggio)
+    })
     getMe()
       .then(res => setUtente(res.errore ? null : res))
       .catch(() => setUtente(null))
@@ -31,7 +36,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ utente, setUtente, logout, caricamento }}>
+    <AuthContext.Provider value={{ utente, setUtente, logout, caricamento, avviso, setAvviso }}>
       {children}
     </AuthContext.Provider>
   )
