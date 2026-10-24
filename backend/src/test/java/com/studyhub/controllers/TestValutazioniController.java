@@ -1,27 +1,38 @@
 package com.studyhub.controllers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.studyhub.models.*;
 import com.studyhub.repositories.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
+@AutoConfigureMockMvc
 @Transactional
 public class TestValutazioniController {
 
     @Autowired
-    private ValutazioniController valutazioniController;
+    private MockMvc mockMvc;
+    @Autowired
+    private ObjectMapper objectMapper;
     @Autowired
     private UtenteRepository utenteRepository;
     @Autowired
@@ -37,7 +48,7 @@ public class TestValutazioniController {
     @Autowired
     private ValutazioneRepository valutazioneRepository;
     @Autowired
-    private BCryptPasswordEncoder passwordEncoder;
+    private PasswordEncoder passwordEncoder;
 
     private CorsoDiStudio corso;
     private Esame esame;
@@ -58,8 +69,15 @@ public class TestValutazioniController {
         return utenteRepository.save(u);
     }
 
+    private ResultActions valuta(Utente valutatore, Contenuto contenuto, int stelle) throws Exception {
+        return mockMvc.perform(post("/api/valutazioni")
+                .with(user(valutatore.getUsername()).roles("UTENTE")).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("contenutoId", contenuto.getId(), "stelle", stelle))));
+    }
+
     @Test
-    public void testValutazione_ripetutaDalloStessoUtente_sovrascriveNonDuplica() {
+    public void testValutazione_ripetutaDalloStessoUtente_sovrascriveNonDuplica() throws Exception {
         // R10NF/ValutaContenuto (pag. 21): "Il sistema consente di sostituire la
         // valutazione precedente" -- non crea un secondo voto per la stessa coppia
         // utente-contenuto.
@@ -69,45 +87,38 @@ public class TestValutazioniController {
         Contenuto contenuto = contenutoRepository.save(
                 new Consiglio(autore, esame, "Contenuto da valutare", etichetta));
 
-        ResponseEntity<Map<String, Object>> prima = valutazioniController.valuta(
-                Map.of("username", valutatore.getUsername(), "contenutoId", contenuto.getId(), "stelle", 2));
-        assertEquals(HttpStatus.OK, prima.getStatusCode());
-        assertEquals(2.0, (double) prima.getBody().get("nuovaMedia"));
+        valuta(valutatore, contenuto, 2)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nuovaMedia").value(2.0));
 
-        ResponseEntity<Map<String, Object>> seconda = valutazioniController.valuta(
-                Map.of("username", valutatore.getUsername(), "contenutoId", contenuto.getId(), "stelle", 5));
-        assertEquals(HttpStatus.OK, seconda.getStatusCode());
-        assertEquals(5.0, (double) seconda.getBody().get("nuovaMedia"));
+        valuta(valutatore, contenuto, 5)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nuovaMedia").value(5.0));
 
         assertEquals(1, valutazioneRepository.countByContenuto(contenuto));
     }
 
     @Test
-    public void testValutazione_fuoriRange_ritorna400() {
+    public void testValutazione_fuoriRange_ritorna400() throws Exception {
         Utente autore = creaUtente("autoreVal2");
         Utente valutatore = creaUtente("valutatore2");
         Etichetta etichetta = etichettaRepository.save(new Etichetta("test-etichetta"));
         Contenuto contenuto = contenutoRepository.save(
                 new Consiglio(autore, esame, "Contenuto da valutare", etichetta));
 
-        ResponseEntity<Map<String, Object>> risposta = valutazioniController.valuta(
-                Map.of("username", valutatore.getUsername(), "contenutoId", contenuto.getId(), "stelle", 9));
+        valuta(valutatore, contenuto, 9).andExpect(status().isBadRequest());
 
-        assertEquals(HttpStatus.BAD_REQUEST, risposta.getStatusCode());
         assertEquals(0, valutazioneRepository.countByContenuto(contenuto));
     }
 
     @Test
-    public void testValutazione_propioContenuto_ritorna403() {
+    public void testValutazione_propioContenuto_ritorna403() throws Exception {
         // R10NF: "L'utente non può valutare i propri contenuti"
         Utente autore = creaUtente("autoreVal3");
         Etichetta etichetta = etichettaRepository.save(new Etichetta("test-etichetta"));
         Contenuto contenuto = contenutoRepository.save(
                 new Consiglio(autore, esame, "Contenuto proprio", etichetta));
 
-        ResponseEntity<Map<String, Object>> risposta = valutazioniController.valuta(
-                Map.of("username", autore.getUsername(), "contenutoId", contenuto.getId(), "stelle", 4));
-
-        assertEquals(HttpStatus.FORBIDDEN, risposta.getStatusCode());
+        valuta(autore, contenuto, 4).andExpect(status().isForbidden());
     }
 }

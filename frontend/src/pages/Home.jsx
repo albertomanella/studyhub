@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import { useAuth } from '../auth/AuthContext'
 
 export default function Home() {
   const navigate = useNavigate()
-  const ruolo = localStorage.getItem('ruolo')
+  const { utente } = useAuth()
 
   return (
     <>
@@ -16,7 +17,7 @@ export default function Home() {
             <div className="course-card-uni">Università di Bologna (UniBo)</div>
           </div>
 
-          {ruolo === 'moderatore' && (
+          {utente.ruolo === 'MODERATORE' && (
             <div style={{ marginTop: 32 }}>
               <div className="page-title">Area Moderatore</div>
               <div className="course-card" onClick={() => navigate('/moderatore/segnalazioni')}>

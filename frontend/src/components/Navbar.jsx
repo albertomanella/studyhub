@@ -1,11 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
 
 export default function Navbar({ extra }) {
   const navigate = useNavigate()
-  const username = localStorage.getItem('username')
+  const { utente, logout } = useAuth()
+  const username = utente?.username
 
-  function esci() {
-    localStorage.removeItem('username')
+  async function esci() {
+    await logout()
     navigate('/')
   }
 

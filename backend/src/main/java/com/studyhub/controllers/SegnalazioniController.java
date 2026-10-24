@@ -2,7 +2,6 @@ package com.studyhub.controllers;
 
 import com.studyhub.dto.SegnalazioneDTO;
 import com.studyhub.models.Contenuto;
-import com.studyhub.models.RuoloUtente;
 import com.studyhub.models.Segnalazione;
 import com.studyhub.models.Sospensione;
 import com.studyhub.models.StatoSegnalazione;
@@ -11,8 +10,10 @@ import com.studyhub.repositories.ContenutoRepository;
 import com.studyhub.repositories.SegnalazioneRepository;
 import com.studyhub.repositories.SospensioneRepository;
 import com.studyhub.repositories.UtenteRepository;
+import com.studyhub.security.UtenteCorrente;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -21,6 +22,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+// Chi può chiamare questi endpoint è deciso in SecurityConfig: segnalare
+// richiede il ruolo UTENTE, /api/moderatore/** il ruolo MODERATORE.
 @RestController
 public class SegnalazioniController {
 
@@ -31,28 +34,25 @@ public class SegnalazioniController {
         private final ContenutoRepository contenutoRepository;
         private final SegnalazioneRepository segnalazioneRepository;
         private final SospensioneRepository sospensioneRepository;
+        private final UtenteCorrente utenteCorrente;
 
         public SegnalazioniController(UtenteRepository utenteRepository, ContenutoRepository contenutoRepository,
-                        SegnalazioneRepository segnalazioneRepository, SospensioneRepository sospensioneRepository) {
+                        SegnalazioneRepository segnalazioneRepository, SospensioneRepository sospensioneRepository,
+                        UtenteCorrente utenteCorrente) {
                 this.utenteRepository = utenteRepository;
                 this.contenutoRepository = contenutoRepository;
                 this.segnalazioneRepository = segnalazioneRepository;
                 this.sospensioneRepository = sospensioneRepository;
+                this.utenteCorrente = utenteCorrente;
         }
 
         @PostMapping("/api/segnalazioni")
-        public ResponseEntity<Map<String, Object>> segnala(@RequestBody Map<String, String> body) {
+        public ResponseEntity<Map<String, Object>> segnala(@RequestBody Map<String, String> body,
+                        Authentication authentication) {
                 Integer idContenuto = Integer.valueOf(body.get("idContenuto"));
-                String usernameSegnalante = body.get("usernameSegnalante");
                 String motivazione = body.get("motivazione");
 
-                // Verifica ruolo utente
-                Optional<Utente> utenteOpt = utenteRepository.findByUsername(usernameSegnalante);
-                if (utenteOpt.isEmpty() || !RuoloUtente.UTENTE.equals(utenteOpt.get().getRuolo())) {
-                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                                        .body(Map.of("errore", "Accesso negato: solo gli utenti possono segnalare"));
-                }
-                Utente utente = utenteOpt.get();
+                Utente utente = utenteCorrente.da(authentication);
 
                 // Verifica che l'utente non stia segnalando un proprio contenuto e che il
                 // contenuto esista
@@ -64,8 +64,7 @@ public class SegnalazioniController {
 
                 Contenuto contenuto = contenutoRepository.findById(idContenuto).get();
 
-                if (contenutoRepository.findById(idContenuto).get().getUtente().getUsername()
-                                .equals(usernameSegnalante)) {
+                if (contenuto.getUtente().getId().equals(utente.getId())) {
                         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                                         .body(Map.of("errore", "Non puoi segnalare un tuo contenuto"));
                 }
@@ -80,14 +79,7 @@ public class SegnalazioniController {
         }
 
         @GetMapping("/api/moderatore/segnalazioni")
-        public ResponseEntity<?> listaSegnalazioni(@RequestParam String username) {
-                Optional<com.studyhub.models.Utente> utente = utenteRepository.findByUsername(username);
-                if (utente.isEmpty() || !RuoloUtente.MODERATORE.equals(utente.get().getRuolo())) {
-                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                                        .body(Map.of("errore",
-                                                        "Accesso negato: solo i moderatori possono visualizzare le segnalazioni"));
-                }
-
+        public ResponseEntity<?> listaSegnalazioni() {
                 List<SegnalazioneDTO> attesa = segnalazioneRepository.findByStato(StatoSegnalazione.ATTESA).stream()
                                 .map(this::toDTO)
                                 .collect(Collectors.toList());
@@ -97,12 +89,7 @@ public class SegnalazioniController {
         @PatchMapping("/api/moderatore/segnalazioni/{id}")
         public ResponseEntity<Map<String, Object>> gestisciSegnalazione(@PathVariable Integer id,
                         @RequestBody Map<String, String> body) {
-                String usernameModeratore = body.get("usernameModeratore");
                 String esito = body.get("esito"); // "accolta" oppure "respinta"
-
-                if (verificaModeratore(usernameModeratore).isEmpty()) {
-                        return erroreAccessoModeratore("gestire le segnalazioni");
-                }
 
                 Optional<Segnalazione> segnalazioneOpt = segnalazioneRepository.findById(id);
                 if (segnalazioneOpt.isEmpty()) {
@@ -144,14 +131,9 @@ public class SegnalazioniController {
 
         @PostMapping("/api/moderatore/sospensioni")
         public ResponseEntity<Map<String, Object>> sospendiUtente(@RequestBody Map<String, Object> body) {
-                String usernameModeratore = (String) body.get("usernameModeratore");
                 String usernameUtente = (String) body.get("usernameUtente");
                 String motivazione = (String) body.get("motivazione");
                 Integer giorni = (Integer) body.get("giorni");
-
-                if (verificaModeratore(usernameModeratore).isEmpty()) {
-                        return erroreAccessoModeratore("sospendere gli utenti");
-                }
 
                 Optional<Utente> utenteOpt = utenteRepository.findByUsername(usernameUtente);
                 if (utenteOpt.isEmpty()) {
@@ -204,16 +186,6 @@ public class SegnalazioniController {
                 } else {
                         sospensioneRepository.save(new Sospensione(autore, motivo, dataFine));
                 }
-        }
-
-        private Optional<Utente> verificaModeratore(String username) {
-                return utenteRepository.findByUsername(username)
-                                .filter(u -> RuoloUtente.MODERATORE.equals(u.getRuolo()));
-        }
-
-        private ResponseEntity<Map<String, Object>> erroreAccessoModeratore(String azione) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                                .body(Map.of("errore", "Accesso negato: solo i moderatori possono " + azione));
         }
 
         private SegnalazioneDTO toDTO(Segnalazione s) {

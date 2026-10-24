@@ -6,7 +6,6 @@ import { getEsami, getEtichette, creaConsiglio } from '../services/api'
 export default function PubblicaConsiglio() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const username = localStorage.getItem('username')
 
   const [esami, setEsami] = useState([])
   const [etichette, setEtichette] = useState([])
@@ -16,8 +15,9 @@ export default function PubblicaConsiglio() {
   const [errore, setErrore] = useState('')
 
   useEffect(() => {
-    getEsami().then(setEsami).catch(() => {})
+    getEsami().then(data => Array.isArray(data) && setEsami(data)).catch(() => {})
     getEtichette().then(data => {
+      if (!Array.isArray(data)) return
       setEtichette(data)
       if (data.length && !etichettaId) setEtichettaId(String(data[0].id))
     }).catch(() => {})
@@ -31,7 +31,7 @@ export default function PubblicaConsiglio() {
     setErrore('')
     try {
       const res = await creaConsiglio({
-        corpo, esameId: parseInt(esameId), etichettaId: parseInt(etichettaId), username
+        corpo, esameId: parseInt(esameId), etichettaId: parseInt(etichettaId)
       })
       if (res.errore) { setErrore(res.errore); return }
       navigate(`/esame/${esameId}`)

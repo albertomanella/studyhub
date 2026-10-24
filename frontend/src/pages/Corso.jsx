@@ -10,7 +10,9 @@ export default function Corso() {
   const [errore, setErrore] = useState('')
 
   useEffect(() => {
-    getEsami().then(setEsami).catch(err => setErrore(err.message))
+    getEsami()
+      .then(data => data.errore ? setErrore(data.errore) : setEsami(data))
+      .catch(err => setErrore(err.message))
   }, [])
 
   const filtrati = esami.filter(e => e.nome.toLowerCase().includes(cerca.toLowerCase()))

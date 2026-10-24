@@ -10,10 +10,20 @@ import com.studyhub.models.Utente;
 import com.studyhub.repositories.CorsoDiStudioRepository;
 import com.studyhub.repositories.SospensioneRepository;
 import com.studyhub.repositories.UtenteRepository;
+import com.studyhub.security.UtenteCorrente;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.context.SecurityContextRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -25,16 +35,24 @@ import java.util.stream.Collectors;
 public class AuthController {
 
     private final UtenteRepository utenteRepository;
-    private final BCryptPasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
     private final CorsoDiStudioRepository corsiRepository;
     private final SospensioneRepository sospensioneRepository;
+    private final AuthenticationManager authenticationManager;
+    private final SecurityContextRepository securityContextRepository;
+    private final UtenteCorrente utenteCorrente;
 
-    public AuthController(UtenteRepository utenteRepository, BCryptPasswordEncoder passwordEncoder,
-            CorsoDiStudioRepository corsiRepository, SospensioneRepository sospensioneRepository) {
+    public AuthController(UtenteRepository utenteRepository, PasswordEncoder passwordEncoder,
+            CorsoDiStudioRepository corsiRepository, SospensioneRepository sospensioneRepository,
+            AuthenticationManager authenticationManager, SecurityContextRepository securityContextRepository,
+            UtenteCorrente utenteCorrente) {
         this.utenteRepository = utenteRepository;
         this.passwordEncoder = passwordEncoder;
         this.corsiRepository = corsiRepository;
         this.sospensioneRepository = sospensioneRepository;
+        this.authenticationManager = authenticationManager;
+        this.securityContextRepository = securityContextRepository;
+        this.utenteCorrente = utenteCorrente;
     }
 
     private ResponseEntity<?> responseBuilder(Utente u) {
@@ -92,23 +110,45 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
-        String username = body.get("username");
-        String password = body.get("password");
+    public ResponseEntity<?> login(@RequestBody Map<String, String> body, HttpServletRequest request,
+            HttpServletResponse response) {
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    UsernamePasswordAuthenticationToken.unauthenticated(body.get("username"), body.get("password")));
+        } catch (AuthenticationException e) {
+            // Stesso messaggio per username inesistente e password errata
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("errore", "Credenziali non valide"));
+        }
 
-        return utenteRepository.findByUsername(username)
-                .filter(u -> passwordEncoder.matches(password, u.getPassword()))
-                .<ResponseEntity<?>>map(u -> {
-                    Optional<Sospensione> sospensione = sospensioneRepository.findByUtente(u)
-                            .filter(Sospensione::isAttiva);
-                    if (sospensione.isPresent()) {
-                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                                .body(Map.of("errore",
-                                        "Account sospeso fino al " + sospensione.get().getDataFine()));
-                    }
-                    return responseBuilder(u);
-                })
-                .orElse(ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("errore", "Credenziali non valide")));
+        // La sospensione si controlla solo dopo la password: chi non la conosce
+        // non scopre se un account è sospeso.
+        Utente u = utenteCorrente.da(authentication);
+        Optional<Sospensione> sospensione = sospensioneRepository.findByUtente(u)
+                .filter(Sospensione::isAttiva);
+        if (sospensione.isPresent()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("errore", "Account sospeso fino al " + sospensione.get().getDataFine()));
+        }
+
+        // Nuovo ID di sessione al login: un ID fissato in precedenza da un
+        // attaccante non diventa valido (session fixation).
+        if (request.getSession(false) != null) {
+            request.changeSessionId();
+        }
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
+        securityContextRepository.saveContext(context, request, response);
+
+        return responseBuilder(u);
+    }
+
+    // Il frontend lo chiama all'avvio per sapere se esiste una sessione valida.
+    // Il logout è gestito da Spring Security (POST /api/auth/logout).
+    @GetMapping("/me")
+    public ResponseEntity<?> me(Authentication authentication) {
+        return responseBuilder(utenteCorrente.da(authentication));
     }
 }

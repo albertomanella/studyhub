@@ -6,7 +6,6 @@ import { getEsami, creaDocumento } from '../services/api'
 export default function PubblicaDocumento() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const username = localStorage.getItem('username')
 
   const [esami, setEsami] = useState([])
   const [esameId, setEsameId] = useState(params.get('esame_id') || '')
@@ -17,7 +16,7 @@ export default function PubblicaDocumento() {
   const [caricamento, setCaricamento] = useState(false)
 
   useEffect(() => {
-    getEsami().then(setEsami).catch(() => {})
+    getEsami().then(data => Array.isArray(data) && setEsami(data)).catch(() => {})
   }, [])
 
   async function handleSubmit(e) {
@@ -32,7 +31,6 @@ export default function PubblicaDocumento() {
       fd.append('titolo', titolo)
       fd.append('descrizione', corpo)
       fd.append('esameId', esameId)
-      fd.append('username', username)
       fd.append('file', file)
 
       const res = await creaDocumento(fd)

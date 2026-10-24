@@ -3,8 +3,10 @@ package com.studyhub.controllers;
 import com.studyhub.dto.ContenutoDTO;
 import com.studyhub.models.*;
 import com.studyhub.repositories.*;
+import com.studyhub.security.UtenteCorrente;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,7 +27,7 @@ public class ContenutiController {
 
     private final ContenutoRepository contenutoRepository;
     private final EsameRepository esameRepository;
-    private final UtenteRepository utenteRepository;
+    private final UtenteCorrente utenteCorrente;
     private final EtichettaRepository etichettaRepository;
     private final ValutazioneRepository valutazioneRepository;
 
@@ -33,11 +35,11 @@ public class ContenutiController {
     private String uploadDir;
 
     public ContenutiController(ContenutoRepository contenutoRepository, EsameRepository esameRepository,
-            UtenteRepository utenteRepository, EtichettaRepository etichettaRepository,
+            UtenteCorrente utenteCorrente, EtichettaRepository etichettaRepository,
             ValutazioneRepository valutazioneRepository) {
         this.contenutoRepository = contenutoRepository;
         this.esameRepository = esameRepository;
-        this.utenteRepository = utenteRepository;
+        this.utenteCorrente = utenteCorrente;
         this.etichettaRepository = etichettaRepository;
         this.valutazioneRepository = valutazioneRepository;
     }
@@ -98,13 +100,13 @@ public class ContenutiController {
             @RequestParam("titolo") String titolo,
             @RequestParam("descrizione") String descrizione,
             @RequestParam("esameId") int esameId,
-            @RequestParam("username") String username,
-            @RequestParam("file") MultipartFile file) throws IOException {
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication) throws IOException {
 
+        Utente utente = utenteCorrente.da(authentication);
         Esame esame = esameRepository.findById(esameId).orElse(null);
-        Utente utente = utenteRepository.findByUsername(username).orElse(null);
-        if (esame == null || utente == null) {
-            return ResponseEntity.badRequest().body(Map.of("errore", "Esame o utente non trovato"));
+        if (esame == null) {
+            return ResponseEntity.badRequest().body(Map.of("errore", "Esame non trovato"));
         }
 
         String originale = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
@@ -120,17 +122,16 @@ public class ContenutiController {
     }
 
     @PostMapping("/consiglio")
-    public ResponseEntity<?> creaConsiglio(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> creaConsiglio(@RequestBody Map<String, Object> body, Authentication authentication) {
         String corpo = (String) body.get("corpo");
         int esameId = (Integer) body.get("esameId");
         int etichettaId = (Integer) body.get("etichettaId");
-        String username = (String) body.get("username");
 
+        Utente utente = utenteCorrente.da(authentication);
         Esame esame = esameRepository.findById(esameId).orElse(null);
-        Utente utente = utenteRepository.findByUsername(username).orElse(null);
         Etichetta etichetta = etichettaRepository.findById(etichettaId).orElse(null);
-        if (esame == null || utente == null || etichetta == null) {
-            return ResponseEntity.badRequest().body(Map.of("errore", "Esame, utente o etichetta non trovati"));
+        if (esame == null || etichetta == null) {
+            return ResponseEntity.badRequest().body(Map.of("errore", "Esame o etichetta non trovati"));
         }
 
         Consiglio consiglio = new Consiglio(utente, esame, corpo, etichetta);
@@ -139,12 +140,13 @@ public class ContenutiController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminaContenuto(@PathVariable int id, @RequestParam String username) {
+    public ResponseEntity<?> eliminaContenuto(@PathVariable int id, Authentication authentication) {
         Contenuto c = contenutoRepository.findById(id).orElse(null);
         if (c == null) {
             return ResponseEntity.notFound().build();
         }
-        if (!c.getUtente().getUsername().equals(username)) {
+        Utente utente = utenteCorrente.da(authentication);
+        if (!c.getUtente().getId().equals(utente.getId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("errore", "Puoi eliminare solo i tuoi contenuti"));
         }
