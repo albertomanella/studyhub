@@ -159,4 +159,31 @@ public class TestAuthController {
         mockMvc.perform(get("/api/auth/me").session(sessione))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    public void testSospensioneDuranteLaSessione_disconnetteLUtente() throws Exception {
+        // L'utente fa login, poi un moderatore lo sospende mentre la sessione è aperta
+        Utente utente = creaUtente("sospesoDopoLogin");
+        MockHttpSession sessione = sessione(login("sospesoDopoLogin", PASSWORD));
+        sospensioneRepository.save(new Sospensione(utente, "Comportamento scorretto", LocalDate.now().plusDays(7)));
+
+        mockMvc.perform(get("/api/esami").session(sessione))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.codice").value("ACCOUNT_SOSPESO"))
+                .andExpect(jsonPath("$.errore").value(containsString("sospeso")));
+
+        // La sessione è stata distrutta: la richiesta successiva non è più autenticata
+        mockMvc.perform(get("/api/auth/me").session(sessione))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void testSospensioneScaduta_nonInterrompeLaSessione() throws Exception {
+        Utente utente = creaUtente("exSospesoInSessione");
+        MockHttpSession sessione = sessione(login("exSospesoInSessione", PASSWORD));
+        sospensioneRepository.save(new Sospensione(utente, "Sospensione scaduta", LocalDate.now().minusDays(1)));
+
+        mockMvc.perform(get("/api/esami").session(sessione))
+                .andExpect(status().isOk());
+    }
 }
