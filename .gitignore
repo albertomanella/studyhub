@@ -8,10 +8,11 @@ frontend/dist/
 # macOS
 .DS_Store
 
-# IDE
+# IDE e strumenti locali
 .idea/
 *.iml
 .vscode/
+.claude/
 
 # uploads (relativi alla cartella da cui si avvia il backend)
 uploads/
