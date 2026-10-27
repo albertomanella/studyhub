@@ -55,7 +55,8 @@ public class ContenutiController {
         this.uploadValidator = uploadValidator;
     }
 
-    private ContenutoDTO toDTO(Contenuto c) {
+    // utente: chi fa la richiesta, per includere la sua valutazione
+    private ContenutoDTO toDTO(Contenuto c, Utente utente) {
         String tipo;
         String titolo = null, descrizione = null, nomeFile = null;
         String corpo = null, etichetta = null;
@@ -76,6 +77,9 @@ public class ContenutiController {
 
         Double media = valutazioneRepository.mediaStelle(c);
         int numValutazioni = ((int) valutazioneRepository.countByContenuto(c));
+        Integer miaValutazione = valutazioneRepository.findByUtenteAndContenuto(utente, c)
+                .map(Valutazione::getStelle)
+                .orElse(null);
 
         return new ContenutoDTO(
                 c.getId(),
@@ -85,15 +89,17 @@ public class ContenutiController {
                 titolo, descrizione, nomeFile,
                 corpo, etichetta,
                 media != null ? media : 0.0,
-                numValutazioni);
+                numValutazioni,
+                miaValutazione);
     }
 
     @GetMapping
-    public ResponseEntity<?> getContenuti(@RequestParam("esame_id") int esameId) {
+    public ResponseEntity<?> getContenuti(@RequestParam("esame_id") int esameId, Authentication authentication) {
+        Utente utente = utenteCorrente.da(authentication);
         return esameRepository.findById(esameId)
                 .map(esame -> {
                     List<ContenutoDTO> dto = contenutoRepository.findByEsame(esame).stream()
-                            .map(this::toDTO)
+                            .map(c -> toDTO(c, utente))
                             .collect(Collectors.toList());
                     return ResponseEntity.ok(dto);
                 })
@@ -101,9 +107,10 @@ public class ContenutiController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getContenuto(@PathVariable int id) {
+    public ResponseEntity<?> getContenuto(@PathVariable int id, Authentication authentication) {
+        Utente utente = utenteCorrente.da(authentication);
         return contenutoRepository.findById(id)
-                .map(c -> ResponseEntity.ok(toDTO(c)))
+                .map(c -> ResponseEntity.ok(toDTO(c, utente)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -137,7 +144,7 @@ public class ContenutiController {
             fileStorage.elimina(nomeSalvato);
             throw e;
         }
-        return ResponseEntity.ok(toDTO(doc));
+        return ResponseEntity.ok(toDTO(doc, utente));
     }
 
     @PostMapping("/consiglio")
@@ -155,7 +162,7 @@ public class ContenutiController {
 
         Consiglio consiglio = new Consiglio(utente, esame, corpo, etichetta);
         contenutoRepository.save(consiglio);
-        return ResponseEntity.ok(toDTO(consiglio));
+        return ResponseEntity.ok(toDTO(consiglio, utente));
     }
 
     @DeleteMapping("/{id}")
