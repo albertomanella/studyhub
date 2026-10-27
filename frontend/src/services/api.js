@@ -19,6 +19,18 @@ function csrfToken() {
   return match ? decodeURIComponent(match[1]) : null
 }
 
+// Dopo il logout Spring Security cancella il token CSRF, e il login successivo
+// verrebbe rifiutato. Qualunque GET al server ne fa arrivare uno nuovo: se
+// manca, lo si chiede prima di inviare una richiesta che modifica dati.
+async function assicuraTokenCsrf() {
+  if (csrfToken()) return
+  try {
+    await fetch(`${BASE}/auth/me`)
+  } catch {
+    // Backend non raggiungibile: lo segnalerà la richiesta vera e propria
+  }
+}
+
 const MESSAGGI_ERRORE = {
   401: 'Sessione scaduta: effettua di nuovo il login.',
   403: 'Operazione non consentita.',
@@ -35,6 +47,7 @@ async function request(path, options = {}) {
     headers['Content-Type'] = 'application/json'
   }
   if (method !== 'GET') {
+    await assicuraTokenCsrf()
     const token = csrfToken()
     if (token) headers['X-XSRF-TOKEN'] = token
   }
