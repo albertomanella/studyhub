@@ -42,7 +42,7 @@ export default function Contenuto() {
         ...prev,
         mediaStelle: res.nuovaMedia,
         numValutazioni: res.numValutazioni,
-        valutazioneCorrente: stelle
+        miaValutazione: stelle
       }))
     } catch (err) {
       setRatingMsg(err.message)
@@ -99,7 +99,11 @@ export default function Contenuto() {
   )
 
   const sonoAutore = contenuto.autore === utente.username
-  const stelleAttuali = 0
+  // Chi legge vede le stelle che ha dato; l'autore, che non può votare,
+  // vede la media ricevuta
+  const stelleAttuali = sonoAutore
+    ? Math.round(contenuto.mediaStelle)
+    : (contenuto.miaValutazione ?? 0)
 
   return (
     <>

@@ -14,11 +14,13 @@ public class ContenutoDTO {
     private String etichetta; // nome, non l'intero oggetto Etichetta
     private final double mediaStelle;
     private final int numValutazioni;
+    // Stelle date dall'utente che fa la richiesta; null se non ha ancora votato
+    private final Integer miaValutazione;
 
     public ContenutoDTO(Integer id, String tipo, String autore, String dataCreazione,
             String titolo, String descrizione, String nomeFile,
             String corpo, String etichetta,
-            double mediaStelle, int numValutazioni) {
+            double mediaStelle, int numValutazioni, Integer miaValutazione) {
         this.id = id;
         this.tipo = tipo;
         this.autore = autore;
@@ -30,6 +32,11 @@ public class ContenutoDTO {
         this.etichetta = etichetta;
         this.mediaStelle = mediaStelle;
         this.numValutazioni = numValutazioni;
+        this.miaValutazione = miaValutazione;
+    }
+
+    public Integer getMiaValutazione() {
+        return miaValutazione;
     }
 
     public Integer getId() {
