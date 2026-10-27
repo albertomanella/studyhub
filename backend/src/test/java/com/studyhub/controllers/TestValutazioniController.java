@@ -17,9 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -120,5 +122,25 @@ public class TestValutazioniController {
                 new Consiglio(autore, esame, "Contenuto proprio", etichetta));
 
         valuta(autore, contenuto, 4).andExpect(status().isForbidden());
+    }
+
+    @Test
+    public void testMiaValutazione_visibileSoloAChiHaVotato() throws Exception {
+        Utente autore = creaUtente("autoreVal4");
+        Utente valutatore = creaUtente("valutatore4");
+        creaUtente("altroLettore");
+        Etichetta etichetta = etichettaRepository.save(new Etichetta("test-etichetta"));
+        Contenuto contenuto = contenutoRepository.save(
+                new Consiglio(autore, esame, "Contenuto da valutare", etichetta));
+
+        valuta(valutatore, contenuto, 4).andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/contenuti/{id}", contenuto.getId()).with(user("valutatore4").roles("UTENTE")))
+                .andExpect(jsonPath("$.miaValutazione").value(4));
+        mockMvc.perform(get("/api/contenuti").param("esame_id", esame.getId().toString())
+                .with(user("valutatore4").roles("UTENTE")))
+                .andExpect(jsonPath("$[0].miaValutazione").value(4));
+        mockMvc.perform(get("/api/contenuti/{id}", contenuto.getId()).with(user("altroLettore").roles("UTENTE")))
+                .andExpect(jsonPath("$.miaValutazione").value(nullValue()));
     }
 }
