@@ -4,19 +4,26 @@ import com.studyhub.dto.ContenutoDTO;
 import com.studyhub.models.*;
 import com.studyhub.repositories.*;
 import com.studyhub.security.UtenteCorrente;
+import com.studyhub.services.ContenutoService;
+import com.studyhub.storage.FileNonAmmessoException;
+import com.studyhub.storage.FileStorage;
+import com.studyhub.storage.UploadValidator;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -30,18 +37,22 @@ public class ContenutiController {
     private final UtenteCorrente utenteCorrente;
     private final EtichettaRepository etichettaRepository;
     private final ValutazioneRepository valutazioneRepository;
-
-    @org.springframework.beans.factory.annotation.Value("${app.upload.dir}")
-    private String uploadDir;
+    private final ContenutoService contenutoService;
+    private final FileStorage fileStorage;
+    private final UploadValidator uploadValidator;
 
     public ContenutiController(ContenutoRepository contenutoRepository, EsameRepository esameRepository,
             UtenteCorrente utenteCorrente, EtichettaRepository etichettaRepository,
-            ValutazioneRepository valutazioneRepository) {
+            ValutazioneRepository valutazioneRepository, ContenutoService contenutoService,
+            FileStorage fileStorage, UploadValidator uploadValidator) {
         this.contenutoRepository = contenutoRepository;
         this.esameRepository = esameRepository;
         this.utenteCorrente = utenteCorrente;
         this.etichettaRepository = etichettaRepository;
         this.valutazioneRepository = valutazioneRepository;
+        this.contenutoService = contenutoService;
+        this.fileStorage = fileStorage;
+        this.uploadValidator = uploadValidator;
     }
 
     private ContenutoDTO toDTO(Contenuto c) {
@@ -53,7 +64,8 @@ public class ContenutiController {
             tipo = "documento";
             titolo = d.getTitolo();
             descrizione = d.getDescrizione();
-            nomeFile = d.getNomeFile();
+            // Il nome su disco resta interno al backend
+            nomeFile = d.getNomeOriginale();
         } else if (c instanceof Consiglio con) {
             tipo = "consiglio";
             corpo = con.getCorpo();
@@ -109,15 +121,22 @@ public class ContenutiController {
             return ResponseEntity.badRequest().body(Map.of("errore", "Esame non trovato"));
         }
 
-        String originale = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
-        String nomeSalvato = UUID.randomUUID() + "_" + originale;
+        String nomeOriginale = FileStorage.nomeOriginale(file.getOriginalFilename());
+        try (InputStream contenuto = file.getInputStream()) {
+            uploadValidator.verifica(nomeOriginale, contenuto);
+        } catch (FileNonAmmessoException e) {
+            return ResponseEntity.badRequest().body(Map.of("errore", e.getMessage()));
+        }
 
-        Path dir = Path.of(uploadDir);
-        Files.createDirectories(dir);
-        Files.write(dir.resolve(nomeSalvato), file.getBytes());
-
-        Documento doc = new Documento(utente, esame, titolo, descrizione, nomeSalvato);
-        contenutoRepository.save(doc);
+        String nomeSalvato = fileStorage.salva(file);
+        Documento doc = new Documento(utente, esame, titolo, descrizione, nomeSalvato, nomeOriginale);
+        try {
+            contenutoRepository.save(doc);
+        } catch (RuntimeException e) {
+            // Senza la riga nel database il file non sarebbe raggiungibile
+            fileStorage.elimina(nomeSalvato);
+            throw e;
+        }
         return ResponseEntity.ok(toDTO(doc));
     }
 
@@ -150,24 +169,29 @@ public class ContenutiController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("errore", "Puoi eliminare solo i tuoi contenuti"));
         }
-        contenutoRepository.delete(c);
+        contenutoService.elimina(c);
         return ResponseEntity.ok(Map.of("successo", true));
     }
 
+    // Il file viene inviato a blocchi direttamente dal disco (Resource), senza
+    // caricarlo in memoria. Sempre come download: il browser non lo mostra né lo
+    // esegue, e Spring Security aggiunge "X-Content-Type-Options: nosniff".
     @GetMapping("/{id}/file")
-    public ResponseEntity<byte[]> downloadFile(@PathVariable int id) throws IOException {
+    public ResponseEntity<Resource> downloadFile(@PathVariable int id) {
         Contenuto c = contenutoRepository.findById(id).orElse(null);
         if (!(c instanceof Documento doc)) {
             return ResponseEntity.notFound().build();
         }
-        Path path = Path.of(uploadDir).resolve(doc.getNomeFile());
-        if (!Files.exists(path)) {
+        Resource file = fileStorage.apri(doc.getNomeFile());
+        if (file == null) {
             return ResponseEntity.notFound().build();
         }
-        byte[] bytes = Files.readAllBytes(path);
+        ContentDisposition disposizione = ContentDisposition.attachment()
+                .filename(doc.getNomeOriginale(), StandardCharsets.UTF_8)
+                .build();
         return ResponseEntity.ok()
-                .header("Content-Disposition", "attachment; filename=\"" + doc.getNomeFile() + "\"")
-                .header("Content-Type", "application/octet-stream")
-                .body(bytes);
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposizione.toString())
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(file);
     }
 }
