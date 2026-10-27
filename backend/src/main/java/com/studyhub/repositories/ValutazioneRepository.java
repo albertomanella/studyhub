@@ -22,4 +22,6 @@ public interface ValutazioneRepository extends JpaRepository<Valutazione, Intege
 
     // Sostituisce InMemoryStore.numValutazioni(contenutoId)
     long countByContenuto(Contenuto contenuto);
+
+    void deleteByContenuto(Contenuto contenuto);
 }

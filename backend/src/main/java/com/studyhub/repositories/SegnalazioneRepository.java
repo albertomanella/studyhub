@@ -16,4 +16,6 @@ public interface SegnalazioneRepository extends JpaRepository<Segnalazione, Inte
 
     // Sostituisce il filtro "attesa" nell'endpoint del moderatore
     List<Segnalazione> findByStato(StatoSegnalazione stato);
+
+    void deleteByContenuto(Contenuto contenuto);
 }
