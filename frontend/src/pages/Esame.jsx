@@ -39,9 +39,11 @@ export default function Esame() {
     return (
       <div className="card" onClick={() => navigate(`/contenuto/${c.id}`)}>
         <div className="card-title">{c.titolo}</div>
-        <div className="card-body">
-          {(c.corpo || '').slice(0, 100)}{(c.corpo || '').length > 100 ? '...' : ''}
-        </div>
+        {c.descrizione && (
+          <div className="card-body">
+            {c.descrizione.slice(0, 100)}{c.descrizione.length > 100 ? '...' : ''}
+          </div>
+        )}
         <div className="card-meta">
           <span>@{c.autore}</span>
           <span>{formatData(c.dataCreazione)}</span>
