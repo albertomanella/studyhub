@@ -115,11 +115,10 @@ public class SegnalazioniController {
                         sospendiSeSogliaRaggiunta(autore);
                         segnalazione.setStato(StatoSegnalazione.ACCOLTA);
                         String statoFinale = segnalazione.getStato().name();
-                        // fk_segnalazione_contenuto è ON DELETE CASCADE: cancellare il contenuto
-                        // elimina a cascata questa riga (e le eventuali altre segnalazioni ancora
-                        // in attesa sullo stesso contenuto, che non hanno più nulla da moderare).
-                        // Per questo la risposta si costruisce PRIMA della delete, senza più
-                        // richiamare segnalazioneRepository.save(): la riga sarebbe già sparita.
+                        // Eliminare il contenuto elimina anche le sue segnalazioni, compresa
+                        // questa e le altre ancora in attesa, che non hanno più nulla da
+                        // moderare (ContenutoService). Per questo la risposta si costruisce
+                        // prima dell'eliminazione, senza salvare la segnalazione.
                         contenutoService.elimina(contenuto);
                         return ResponseEntity.ok(Map.of("successo", true, "stato", statoFinale));
                 } else if ("respinta".equalsIgnoreCase(esito)) {

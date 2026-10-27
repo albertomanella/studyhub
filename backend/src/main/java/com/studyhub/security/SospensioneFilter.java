@@ -1,6 +1,6 @@
 package com.studyhub.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.studyhub.models.Sospensione;
 import com.studyhub.repositories.SospensioneRepository;
 import com.studyhub.repositories.UtenteRepository;
