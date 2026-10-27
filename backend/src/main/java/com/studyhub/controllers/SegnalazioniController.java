@@ -11,6 +11,7 @@ import com.studyhub.repositories.SegnalazioneRepository;
 import com.studyhub.repositories.SospensioneRepository;
 import com.studyhub.repositories.UtenteRepository;
 import com.studyhub.security.UtenteCorrente;
+import com.studyhub.services.ContenutoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -35,15 +36,17 @@ public class SegnalazioniController {
         private final SegnalazioneRepository segnalazioneRepository;
         private final SospensioneRepository sospensioneRepository;
         private final UtenteCorrente utenteCorrente;
+        private final ContenutoService contenutoService;
 
         public SegnalazioniController(UtenteRepository utenteRepository, ContenutoRepository contenutoRepository,
                         SegnalazioneRepository segnalazioneRepository, SospensioneRepository sospensioneRepository,
-                        UtenteCorrente utenteCorrente) {
+                        UtenteCorrente utenteCorrente, ContenutoService contenutoService) {
                 this.utenteRepository = utenteRepository;
                 this.contenutoRepository = contenutoRepository;
                 this.segnalazioneRepository = segnalazioneRepository;
                 this.sospensioneRepository = sospensioneRepository;
                 this.utenteCorrente = utenteCorrente;
+                this.contenutoService = contenutoService;
         }
 
         @PostMapping("/api/segnalazioni")
@@ -117,7 +120,7 @@ public class SegnalazioniController {
                         // in attesa sullo stesso contenuto, che non hanno più nulla da moderare).
                         // Per questo la risposta si costruisce PRIMA della delete, senza più
                         // richiamare segnalazioneRepository.save(): la riga sarebbe già sparita.
-                        contenutoRepository.delete(contenuto);
+                        contenutoService.elimina(contenuto);
                         return ResponseEntity.ok(Map.of("successo", true, "stato", statoFinale));
                 } else if ("respinta".equalsIgnoreCase(esito)) {
                         segnalazione.setStato(StatoSegnalazione.RESPINTA);
