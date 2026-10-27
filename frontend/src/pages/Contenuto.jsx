@@ -127,7 +127,12 @@ export default function Contenuto() {
               <span style={{ textTransform: 'capitalize', color: '#888' }}>[{contenuto.tipo}]</span>
             </div>
 
-            <div className="detail-body">{contenuto.corpo}</div>
+            {/* I documenti hanno una descrizione, i consigli un testo (corpo) */}
+            {(contenuto.tipo === 'documento' ? contenuto.descrizione : contenuto.corpo) && (
+              <div className="detail-body">
+                {contenuto.tipo === 'documento' ? contenuto.descrizione : contenuto.corpo}
+              </div>
+            )}
 
             {contenuto.tipo === 'documento' && (
               <div style={{ marginBottom: 16 }}>
