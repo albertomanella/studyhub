@@ -79,6 +79,9 @@ export default function PubblicaDocumento() {
               <div className="file-input-wrap">
                 <span>Scegli un file da allegare</span>
                 <input type="file" onChange={e => setFile(e.target.files[0] || null)} />
+                <div className="char-count">
+                  PDF, Word, Excel, PowerPoint, JPG, PNG, ZIP o file di testo e codice (max 20 MB)
+                </div>
                 {file && <div style={{ marginTop: 4, color: '#1a5276' }}>File selezionato: {file.name}</div>}
               </div>
             </div>
